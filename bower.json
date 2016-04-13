@@ -1,0 +1,24 @@
+{
+  "name": "pagetree",
+  "version": "0.0.0",
+  "authors": [
+    "Thomas Maroschik <tmaroschik@dfau.de>"
+  ],
+  "moduleType": [
+    "amd"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "d3": "~3.5.10",
+    "fastclick": "~1.0.6",
+    "underscore": "~1.8.3",
+    "jquery": "~2.2.3"
+  }
+}

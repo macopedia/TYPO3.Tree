@@ -1,0 +1,274 @@
+body {
+  background-color: #fafafa;
+  margin: 0;
+  font-size: 14px;
+  font-family: "Helvetica Neue", Helvetica;
+}
+
+#body {
+  margin: 0 auto;
+  position: relative;
+}
+
+#chart, #header, #footer {
+  position: absolute;
+  top: 0;
+}
+
+#header, #footer {
+  z-index: 1;
+  display: block;
+  font-size: 30px;
+  font-weight: 300;
+  text-shadow: 0 1px 0 #fff;
+}
+
+#header.inverted, #footer.inverted {
+  color: #fff;
+  text-shadow: 0 1px 4px #000;
+}
+
+#header {
+  top: 20px;
+  right: 10px;
+  width: 300px;
+  text-align: right;
+}
+
+#footer {
+  top: 520px;
+  right: 10px;
+  width: 300px;
+  text-align: right;
+}
+
+rect {
+  fill: none;
+  pointer-events: all;
+}
+
+pre {
+  font-size: 18px;
+}
+
+line {
+  stroke: #000;
+  stroke-width: 1.5px;
+}
+
+.string, .regexp {
+  color: #f39;
+}
+
+.keyword {
+  color: #00c;
+}
+
+.comment {
+  color: #777;
+  font-style: oblique;
+}
+
+.number {
+  color: #369;
+}
+
+.class, .special {
+  color: #1181B8;
+}
+
+a:link, a:visited {
+  color: steelblue;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #666;
+}
+
+.hint {
+  position: absolute;
+  right: 0;
+  /*width: 1280px;*/
+  font-size: 12px;
+  color: #999;
+}
+
+.node {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  transition: transform 1s;
+}
+
+.node .toggle {
+  cursor: pointer;
+}
+
+.node .chevron {
+  fill: #666;
+  stroke: #333;
+  stroke-width: 1px;
+}
+
+.node text, .node use {
+  font-size: 12px;
+}
+
+path.link {
+  fill: none;
+  shape-rendering: crispEdges;
+  stroke: #ddd;
+  stroke-width: 1;
+}
+
+
+.icon {
+  /*position: relative;*/
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  vertical-align: -22%;
+}
+
+.icon svg,.icon img {
+  display: block;
+  height: 100%;
+  width: 100%;
+  /*-webkit-transform: translate3d(0,0,0);*/
+  /*transform: translate3d(0,0,0);*/
+}
+
+.icon * {
+  display: block;
+  line-height: inherit;
+}
+
+.icon-markup {
+  /*position: absolute;*/
+  display: block;
+  text-align: center;
+  /*top: 0;*/
+  /*left: 0;*/
+  /*right: 0;*/
+  /*bottom: 0;*/
+}
+
+.icon-overlay {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  height: 68.75%;
+  width: 68.75%;
+  text-align: center;
+}
+
+.icon-spin .icon-markup {
+  -webkit-animation: icon-spin 2s infinite linear;
+  animation: icon-spin 2s infinite linear;
+}
+
+@-webkit-keyframes icon-spin {
+  0% {
+    -webkit-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+
+  100% {
+    -webkit-transform: rotate(359deg);
+    transform: rotate(359deg);
+  }
+}
+
+@keyframes icon-spin {
+  0% {
+    -webkit-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+
+  100% {
+    -webkit-transform: rotate(359deg);
+    transform: rotate(359deg);
+  }
+}
+
+.icon-state-disabled .icon-markup {
+  opacity: 0.5;
+}
+
+.icon-size-small {
+  height: 16px;
+  width: 16px;
+  line-height: 16px;
+}
+
+.icon-size-small .icon-unify {
+  line-height: 16px;
+  font-size: 14px;
+}
+
+.icon-size-small .icon-overlay .icon-unify {
+  line-height: 10px;
+  font-size: 9px;
+}
+
+.icon-size-default {
+  height: 32px;
+  width: 32px;
+  line-height: 32px;
+}
+
+.icon-size-default .icon-unify {
+  line-height: 32px;
+  font-size: 28px;
+}
+
+.icon-size-default .icon-overlay .icon-unify {
+  line-height: 20px;
+  font-size: 18px;
+}
+
+.icon-size-large {
+  height: 48px;
+  width: 48px;
+  line-height: 48px;
+}
+
+.icon-size-large .icon-unify {
+  line-height: 48px;
+  font-size: 42px;
+}
+
+.icon-size-large .icon-overlay .icon-unify {
+  line-height: 30px;
+  font-size: 26px;
+}
+
+.icon-actions-edit-copy-release,.icon-actions-edit-cut-release,.icon-status-status-current,.icon-status-dialog-error,.icon-status-status-permission-denied {
+  color: #c83c3c;
+}
+
+.icon-status-status-sorting-light-asc,.icon-status-status-sorting-light-desc {
+  color: #fff;
+}
+
+.icon-status-status-sorting-asc,.icon-status-status-sorting-desc {
+  color: #737373;
+}
+
+.icon-status-dialog-information {
+  color: #6daae0;
+}
+
+.icon-status-dialog-ok,.icon-status-status-permission-granted {
+  color: #79a548;
+}
+
+.icon-status-dialog-notification {
+  color: #333333;
+}
+
+.icon-status-dialog-warning {
+  color: #e8a33d;
+}

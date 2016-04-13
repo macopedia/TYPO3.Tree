@@ -1,0 +1,20 @@
+{
+  "identifier": "1455650038",
+  "name": "Root",
+  "children": [
+    {
+      "identifier": "1455650103",
+      "name": "Wooot",
+      "free": true,
+      "description": "Interactive authoring tools",
+      "children": [
+        {
+          "identifier": "1455650105",
+          "name": "Test",
+          "description": "Web-based 'cloud' applications for authoring data visualisations",
+          "free": true
+        }
+      ]
+    }
+  ]
+}
