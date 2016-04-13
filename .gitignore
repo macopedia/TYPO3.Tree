@@ -1,0 +1,5 @@
+# PHPStorm
+.idea/
+
+# Bower
+bower_components/
