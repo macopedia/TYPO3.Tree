@@ -69,12 +69,12 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
         }, false);
 
         SVGTree.throttledDragmove = _.throttle(function() {
-            var currentRow = (Math.round(( lastDragY / SVGTree.nodeHeight ) * 2) / 2);
+            var currentRow = (Math.round(( SVGTree.lastDragY / SVGTree.nodeHeight ) * 2) / 2);
             var dragElementHeight = currentRow % 1 ? 1 : SVGTree.nodeHeight;
             var dragElementY = (currentRow * SVGTree.nodeHeight) + (currentRow % 1 ? (SVGTree.nodeHeight / 2) : 0);
-            dragElement
+            SVGTree.dragElement
                 .attr('visibility', 'visible')
-                .attr('transform', xy({x:0, y: dragElementY}))
+                .attr('transform', SVGTree.xy({x:0, y: dragElementY}))
                 .attr('height', dragElementHeight);
         }, 40);
 
@@ -294,7 +294,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
 
     SVGTree.dragmove = function(d) {
         SVGTree.lastDragY = d3.event.y;
-        throttledDragmove(d);
+        SVGTree.throttledDragmove(d);
     };
 
     SVGTree.dragend = function(d) {
