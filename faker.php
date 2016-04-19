@@ -41,6 +41,7 @@ function fakeRecord($depth = 0) {
         'identifier' => uniqid(),
         'name' => $words[rand(0, $wordsCount - 1)],
         'icon' => $icons[rand(0, $iconCount - 1)],
+        'checked' => rand(0, 1) === 1
     ];
     $depth--;
     if ($depth) {
@@ -49,4 +50,5 @@ function fakeRecord($depth = 0) {
     return $record;
 }
 
+header('Content-Type: application/json');
 echo json_encode(fakeRecord(3));

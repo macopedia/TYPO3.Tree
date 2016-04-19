@@ -4,6 +4,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
     'use strict';
 
     var SVGTree = {
+        showCheckboxes: true,
         nodeHeight: 20,
         indentWidth: 16,
         duration: 400,
@@ -226,10 +227,22 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
             .attr('x', 8)
             .attr('y', -8);
 
+        if (SVGTree.showCheckboxes) {
+            nodeEnter
+                .append('foreignObject')
+                .attr('x', 24)
+                .attr('y', -8)
+                .attr('width', 20)
+                .attr('height', 20)
+                .append("xhtml:tree")
+                .html('<input class="check" type="checkbox">');
+        }
+
+
         // append the text element
         nodeEnter
             .append('text')
-            .attr('dx', 27)
+            .attr('dx', SVGTree.showCheckboxes ? 45 : 27)
             .attr('dy', 5);
 
         // update
@@ -244,6 +257,14 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
         nodes
             .select('use')
             .attr('xlink:href', function(n) { return '#icon-' + n.iconHash; });
+
+        if (SVGTree.showCheckboxes) {
+            nodes
+                .select('.check')
+                .attr('checked', function (n) {
+                    return n.checked ? 'checked' : null;
+                });
+        }
 
         // delete
         nodes
