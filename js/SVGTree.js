@@ -90,7 +90,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
     };
 
     SVGTree.loadData = function() {
-        d3.json('bigdata-checked.json', function (error, flare) {
+        d3.json('faker.php', function (error, flare) {
             if (error) throw error;
             flare = SVGTree.tree.nodes(flare);
             flare.forEach(function(n) {
@@ -198,7 +198,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
         });
     };
 
-    SVGTree.update =function() {
+    SVGTree.update = function() {
         var visibleRows = Math.ceil(SVGTree.viewportHeight / SVGTree.nodeHeight + 1);
         var position = Math.floor(Math.max(SVGTree.scrollTop, 0) / SVGTree.nodeHeight);
         var visibleNodes = SVGTree.data.nodes.slice(position, position + visibleRows);
@@ -297,7 +297,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
         nodes
             .attr('transform', SVGTree.xy)
             .select('text')
-            .text(function(d) { return d.name; });
+            .text(function(d) { return d.name + (SVGTree.showCheckboxes && d.checked ? ' (checked)' : ''); });
         nodes
             .select('.toggle')
             .attr('transform', function(d) { return d.open ? 'translate(8 -8) rotate(90)' : 'translate(-8 -8) rotate(0)' ; })
