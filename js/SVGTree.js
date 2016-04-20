@@ -90,12 +90,15 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
     };
 
     SVGTree.loadData = function() {
-        d3.json('faker.php', function (error, flare) {
+        d3.json('bigdata-checked.json', function (error, flare) {
             if (error) throw error;
             flare = SVGTree.tree.nodes(flare);
             flare.forEach(function(n) {
                 n.open = true;
                 n.hasChildren = (n.children || n._children) ? 1 : 0;
+                if (SVGTree.showCheckboxes) {
+                    n.indeterminate = SVGTree.isIndeterminate(n);
+                }
                 n.parents = [];
                 n._isDragged = false;
                 if (n.parent) {
@@ -112,6 +115,48 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
             SVGTree.renderData();
             SVGTree.update();
         });
+    };
+
+    SVGTree.isIndeterminate = function(n) {
+        /**
+         * Display states for the node
+         *
+         * checked: node is checked
+         * unchecked: node is unchecked and all children are unchecked
+         * indeterminate: node is unchecked and at least one child is checked
+         *
+         */
+
+        // indeterminate status already known
+        if (typeof n.indeterminate === 'boolean') {
+            return n.indeterminate;
+        }
+
+        // if a node has no children it cannot be indeterminate, if it is checked itself don't hide that by overlaying with indeterminate state
+        if (!n.children || n.checked) {
+            return false;
+        }
+
+        return SVGTree.hasCheckedChildren(n);
+    };
+
+    // recursive function to check if at least child is checked
+    SVGTree.hasCheckedChildren = function(n) {
+
+        if (!n.children) {
+            return n.checked;
+        }
+
+        var hasCheckedChildren = false;
+        n.children.some(function (child) {
+            hasCheckedChildren = SVGTree.hasCheckedChildren(child);
+            // save child's indeterminate status to speed up detection
+            child.indeterminate = (!child.children || n.checked) ? false : hasCheckedChildren;
+
+            // return in some() skips rest if true
+            return hasCheckedChildren;
+        });
+        return hasCheckedChildren;
     };
 
     SVGTree.renderData = function() {
@@ -261,9 +306,8 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
         if (SVGTree.showCheckboxes) {
             nodes
                 .select('.check')
-                .attr('checked', function (n) {
-                    return n.checked ? 'checked' : null;
-                });
+                .attr('checked', function (n) { return n.checked ? 'checked' : null; })
+                .property('indeterminate', function (n) { return n.indeterminate; });
         }
 
         // delete
