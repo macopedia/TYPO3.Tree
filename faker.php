@@ -28,7 +28,7 @@ $iconCount = count($icons);
 
 function fakeChildren($depth = 0) {
     $children = [];
-    $max = rand(5, 25);
+    $max = rand(0, 9);
     for ($i = 0; $i < $max; $i++) {
         $children[] = fakeRecord($depth);
     }
@@ -51,4 +51,4 @@ function fakeRecord($depth = 0) {
 }
 
 header('Content-Type: application/json');
-echo json_encode(fakeRecord(3));
+echo json_encode(fakeRecord(5));
