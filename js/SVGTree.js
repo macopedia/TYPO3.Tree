@@ -282,7 +282,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
                 .attr('y', -8)
                 .attr('width', 20)
                 .attr('height', 20)
-                .append("xhtml:tree")
+                .append("xhtml:div")
                 .html('<input class="check" type="checkbox">');
         }
 
