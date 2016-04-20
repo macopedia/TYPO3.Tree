@@ -273,6 +273,9 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
             .attr('y', -8);
 
         if (SVGTree.showCheckboxes) {
+
+            // @todo Check foreignObject/checkbox support on IE/Edge
+            // @todo Zooming the page containing the svg does not resize/reposition the checkboxes in Safari
             nodeEnter
                 .append('foreignObject')
                 .attr('x', 24)
