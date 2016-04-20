@@ -2,10 +2,10 @@
 
 This is a demo for a SVGTree.
 
-Clone Repo:
+Clone repository:
 
-`git clone git@github.com:NeoBlack/SVGTree.git`
+`git clone git@github.com:wmdbsystems/TYPO3.Tree.git`
 
-Install bower components
+Install bower components:
 
 `bower install`
