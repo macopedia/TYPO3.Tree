@@ -123,7 +123,6 @@ path.link {
   stroke-width: 1;
 }
 
-
 .icon {
   /*position: relative;*/
   display: inline-block;
@@ -132,7 +131,7 @@ path.link {
   vertical-align: -22%;
 }
 
-.icon svg,.icon img {
+.icon svg, .icon img {
   display: block;
   height: 100%;
   width: 100%;
@@ -245,15 +244,15 @@ path.link {
   font-size: 26px;
 }
 
-.icon-actions-edit-copy-release,.icon-actions-edit-cut-release,.icon-status-status-current,.icon-status-dialog-error,.icon-status-status-permission-denied {
+.icon-actions-edit-copy-release, .icon-actions-edit-cut-release, .icon-status-status-current, .icon-status-dialog-error, .icon-status-status-permission-denied {
   color: #c83c3c;
 }
 
-.icon-status-status-sorting-light-asc,.icon-status-status-sorting-light-desc {
+.icon-status-status-sorting-light-asc, .icon-status-status-sorting-light-desc {
   color: #fff;
 }
 
-.icon-status-status-sorting-asc,.icon-status-status-sorting-desc {
+.icon-status-status-sorting-asc, .icon-status-status-sorting-desc {
   color: #737373;
 }
 
@@ -261,7 +260,7 @@ path.link {
   color: #6daae0;
 }
 
-.icon-status-dialog-ok,.icon-status-status-permission-granted {
+.icon-status-dialog-ok, .icon-status-status-permission-granted {
   color: #79a548;
 }
 
