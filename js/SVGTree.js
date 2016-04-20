@@ -151,7 +151,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
         n.children.some(function (child) {
             hasCheckedChildren = SVGTree.hasCheckedChildren(child);
             // save child's indeterminate status to speed up detection
-            child.indeterminate = (!child.children || n.checked) ? false : hasCheckedChildren;
+            child.indeterminate = (!child.children || child.checked) ? false : hasCheckedChildren;
 
             // return in some() skips rest if true
             return hasCheckedChildren;
