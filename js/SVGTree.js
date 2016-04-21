@@ -93,7 +93,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
     };
 
     SVGTree.loadData = function() {
-        d3.json('faker.php', function (error, flare) {
+        d3.json('bigdata-checked.json', function (error, flare) {
             if (error) throw error;
             flare = SVGTree.tree.nodes(flare);
             flare.forEach(function(n) {
@@ -218,26 +218,49 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
         nodes
             .attr('transform', SVGTree.xy)
             .select('text')
-            .text(function(d) { return d.name + (SVGTree.showCheckboxes && d.checked ? ' (checked)' : ''); });
+            .text(SVGTree.updateTextNode);
         nodes
             .select('.toggle')
-            .attr('transform', function(d) { return d.open ? 'translate(8 -8) rotate(90)' : 'translate(-8 -8) rotate(0)' ; })
-            .attr('visibility', function(d) { return d.hasChildren ? 'visible' : 'hidden'; });
+            .attr('transform', SVGTree.updateToggleTransform)
+            .attr('visibility', SVGTree.updateToggleVisibility);
         nodes
             .select('use')
-            .attr('xlink:href', function(n) { return '#icon-' + n.iconHash; });
+            .attr('xlink:href', SVGTree.updateIconId);
 
         if (SVGTree.showCheckboxes) {
             nodes
                 .select('.check')
-                .attr('checked', function (n) { return n.checked ? 'checked' : null; })
-                .property('indeterminate', function (n) { return n.indeterminate; });
+                .attr('checked', SVGTree.updateCheckboxChecked)
+                .property('indeterminate', SVGTree.updateCheckboxIndeterminate);
         }
 
         // delete
         nodes
             .exit()
             .remove();
+    };
+
+    SVGTree.updateTextNode = function(node) {
+        return node.name + (SVGTree.showCheckboxes && node.checked ? ' (checked)' : '');
+    };
+
+    SVGTree.updateToggleTransform = function(node) {
+        return node.open ? 'translate(8 -8) rotate(90)' : 'translate(-8 -8) rotate(0)' ;
+    };
+
+    SVGTree.updateToggleVisibility = function(node) {
+        return node.hasChildren ? 'visible' : 'hidden';
+    };
+
+    SVGTree.updateIconId = function(node) {
+        return '#icon-' + node.iconHash;
+    };
+
+    SVGTree.updateCheckboxChecked = function(node) {
+        return node.checked ? 'checked' : null;
+    };
+    SVGTree.updateCheckboxIndeterminate = function(node) {
+        return node.indeterminate;
     };
 
     SVGTree.updateSVGElements = function(nodes) {
