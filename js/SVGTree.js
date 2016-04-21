@@ -23,7 +23,10 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
         root: null,
         lastDragY: null,
         throttledDragmove: null,
-        data: {}
+        data: {},
+
+        visibleRows: 0,
+        position: 0
     };
 
     /**
@@ -202,22 +205,64 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
         var visibleRows = Math.ceil(SVGTree.viewportHeight / SVGTree.nodeHeight + 1);
         var position = Math.floor(Math.max(SVGTree.scrollTop, 0) / SVGTree.nodeHeight);
         var visibleNodes = SVGTree.data.nodes.slice(position, position + visibleRows);
-        var visibleLinks = SVGTree.data.links.filter(function(d) {
-            return d.source.y <= SVGTree.scrollBottom && SVGTree.scrollTop <= d.target.y;
-        });
 
+        var nodes = SVGTree.nodeElements.selectAll('.node').data(visibleNodes);
+
+        if (SVGTree.visibleRows !== visibleRows || SVGTree.position !== position) {
+            SVGTree.visibleRows = visibleRows;
+            SVGTree.position = position;
+            SVGTree.updateSVGElements(nodes);
+        }
+
+        // update
+        nodes
+            .attr('transform', SVGTree.xy)
+            .select('text')
+            .text(function(d) { return d.name + (SVGTree.showCheckboxes && d.checked ? ' (checked)' : ''); });
+        nodes
+            .select('.toggle')
+            .attr('transform', function(d) { return d.open ? 'translate(8 -8) rotate(90)' : 'translate(-8 -8) rotate(0)' ; })
+            .attr('visibility', function(d) { return d.hasChildren ? 'visible' : 'hidden'; });
+        nodes
+            .select('use')
+            .attr('xlink:href', function(n) { return '#icon-' + n.iconHash; });
+
+        if (SVGTree.showCheckboxes) {
+            nodes
+                .select('.check')
+                .attr('checked', function (n) { return n.checked ? 'checked' : null; })
+                .property('indeterminate', function (n) { return n.indeterminate; });
+        }
+
+        // delete
+        nodes
+            .exit()
+            .remove();
+    };
+
+    SVGTree.updateSVGElements = function(nodes) {
         SVGTree.svg.attr('height', SVGTree.data.nodes.length * SVGTree.nodeHeight);
 
         var icons = SVGTree.iconElements
             .selectAll('.icon-def')
-            .data(SVGTree.data.icons, function(i) { return i.identifier; });
+            .data(SVGTree.data.icons, function (i) {
+                return i.identifier;
+            });
 
         icons
             .enter()
             .append('g')
             .attr('class', 'icon-def')
-            .attr('id', function(i) { return 'icon-' + i.identifier; })
-            .html(function(i) { return i.icon.replace('<svg', '<g').replace('/svg>', '/g>'); });
+            .attr('id', function (i) {
+                return 'icon-' + i.identifier;
+            })
+            .html(function (i) {
+                return i.icon.replace('<svg', '<g').replace('/svg>', '/g>');
+            });
+
+        var visibleLinks = SVGTree.data.links.filter(function(d) {
+            return d.source.y <= SVGTree.scrollBottom && SVGTree.scrollTop <= d.target.y;
+        });
 
         var links = SVGTree.linkElements
             .selectAll('.link')
@@ -238,10 +283,6 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
             .exit()
             .remove();
 
-        var nodes = SVGTree.nodeElements
-            .selectAll('.node')
-            .data(visibleNodes);
-
         // create the node elements
         var nodeEnter = nodes
             .enter()
@@ -254,7 +295,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
         var chevron = nodeEnter
             .append('g')
             .attr('class', 'toggle')
-            .on('click', SVGTree.click);
+            .on('click', SVGTree.chevronClick);
 
         // improve usability by making the click area a 16px square
         chevron
@@ -292,31 +333,6 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
             .append('text')
             .attr('dx', SVGTree.showCheckboxes ? 45 : 27)
             .attr('dy', 5);
-
-        // update
-        nodes
-            .attr('transform', SVGTree.xy)
-            .select('text')
-            .text(function(d) { return d.name + (SVGTree.showCheckboxes && d.checked ? ' (checked)' : ''); });
-        nodes
-            .select('.toggle')
-            .attr('transform', function(d) { return d.open ? 'translate(8 -8) rotate(90)' : 'translate(-8 -8) rotate(0)' ; })
-            .attr('visibility', function(d) { return d.hasChildren ? 'visible' : 'hidden'; });
-        nodes
-            .select('use')
-            .attr('xlink:href', function(n) { return '#icon-' + n.iconHash; });
-
-        if (SVGTree.showCheckboxes) {
-            nodes
-                .select('.check')
-                .attr('checked', function (n) { return n.checked ? 'checked' : null; })
-                .property('indeterminate', function (n) { return n.indeterminate; });
-        }
-
-        // delete
-        nodes
-            .exit()
-            .remove();
     };
 
     SVGTree.squaredDiagonal = function(d) {
@@ -347,7 +363,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
             }, 0);
     };
 
-    SVGTree.click = function(d) {
+    SVGTree.chevronClick = function(d) {
         if (d.open) {
             SVGTree.hideChildren(d);
         } else {
