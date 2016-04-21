@@ -24,7 +24,6 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
         lastDragY: null,
         throttledDragmove: null,
         data: {},
-
         visibleRows: 0,
         position: 0,
         visibleNodesCount: 0
@@ -64,7 +63,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
         SVGTree.updateScrollPosition();
         SVGTree.loadData();
 
-        d3.select(document).on('scroll', function() {
+        $(window).on('resize scroll', function() {
             SVGTree.updateScrollPosition();
             SVGTree.update();
         });
