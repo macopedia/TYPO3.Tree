@@ -199,6 +199,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
                 delete n.icon;
             }
         });
+        SVGTree.svg.attr('height', SVGTree.data.nodes.length * SVGTree.nodeHeight);
     };
 
     SVGTree.update = function() {
@@ -264,7 +265,6 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
     };
 
     SVGTree.updateSVGElements = function(nodes) {
-        SVGTree.svg.attr('height', SVGTree.data.nodes.length * SVGTree.nodeHeight);
 
         var icons = SVGTree.iconElements
             .selectAll('.icon-def')
