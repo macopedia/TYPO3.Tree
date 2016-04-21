@@ -26,7 +26,8 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
         data: {},
 
         visibleRows: 0,
-        position: 0
+        position: 0,
+        visibleNodesCount: 0
     };
 
     /**
@@ -86,10 +87,10 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
 
     SVGTree.updateScrollPosition = function() {
         SVGTree.viewportHeight = parseInt(window.innerHeight);
-        SVGTree.scrollTop = window.scrollY - (SVGTree.viewportHeight / 2);
+        SVGTree.scrollTop = Math.max(0, window.scrollY - (SVGTree.viewportHeight / 2));
         SVGTree.scrollHeight = parseInt(window.document.body.clientHeight);
         SVGTree.scrollBottom = SVGTree.scrollTop + SVGTree.viewportHeight + (SVGTree.viewportHeight / 2);
-        SVGTree.viewportHeight = SVGTree.viewportHeight * 2;
+        SVGTree.viewportHeight = SVGTree.viewportHeight * 1.5;
     };
 
     SVGTree.loadData = function() {
@@ -209,9 +210,10 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
 
         var nodes = SVGTree.nodeElements.selectAll('.node').data(visibleNodes);
 
-        if (SVGTree.visibleRows !== visibleRows || SVGTree.position !== position) {
+        if (SVGTree.visibleRows !== visibleRows || SVGTree.position !== position || SVGTree.visibleNodesCount !== visibleNodes.length) {
             SVGTree.visibleRows = visibleRows;
             SVGTree.position = position;
+            SVGTree.visibleNodesCount = visibleNodes.length;
             SVGTree.updateSVGElements(nodes);
         }
 
@@ -393,14 +395,6 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
             SVGTree.showChildren(d);
         }
         SVGTree.update();
-    };
-
-    SVGTree.updateScrollPosition = function() {
-        SVGTree.viewportHeight = parseInt(window.innerHeight);
-        SVGTree.scrollTop = window.scrollY - (SVGTree.viewportHeight / 2);
-        SVGTree.scrollHeight = parseInt(window.document.body.clientHeight);
-        SVGTree.scrollBottom = SVGTree.scrollTop + SVGTree.viewportHeight + (SVGTree.viewportHeight / 2);
-        SVGTree.viewportHeight = SVGTree.viewportHeight * 2;
     };
 
     SVGTree.dragstart = function(d) {
