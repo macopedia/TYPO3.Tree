@@ -101,7 +101,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
                 n.open = true;
                 n.hasChildren = (n.children || n._children) ? 1 : 0;
                 if (SVGTree.showCheckboxes) {
-                    n.indeterminate = SVGTree.isIndeterminate(n);
+                    n.indeterminate = SVGTree.isCheckboxIndeterminate(n);
                 }
                 n.parents = [];
                 n._isDragged = false;
@@ -121,7 +121,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
         });
     };
 
-    SVGTree.isIndeterminate = function(n) {
+    SVGTree.isCheckboxIndeterminate = function(n) {
         /**
          * Display states for the node
          *
