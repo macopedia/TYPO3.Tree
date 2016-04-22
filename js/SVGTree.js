@@ -86,7 +86,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
 
     SVGTree.updateScrollPosition = function() {
         SVGTree.viewportHeight = parseInt(window.innerHeight);
-        SVGTree.scrollTop = Math.max(0, window.scrollY - (SVGTree.viewportHeight / 2));
+        SVGTree.scrollTop = Math.max(0, window.pageYOffset - (SVGTree.viewportHeight / 2));
         SVGTree.scrollHeight = parseInt(window.document.body.clientHeight);
         SVGTree.scrollBottom = SVGTree.scrollTop + SVGTree.viewportHeight + (SVGTree.viewportHeight / 2);
         SVGTree.viewportHeight = SVGTree.viewportHeight * 1.5;
