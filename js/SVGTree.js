@@ -4,10 +4,13 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
     'use strict';
 
     var SVGTree = {
-        showCheckboxes: true,
-        nodeHeight: 20,
-        indentWidth: 16,
-        duration: 400,
+        settings: {
+            showCheckboxes: true,
+            nodeHeight: 20,
+            indentWidth: 16,
+            duration: 400,
+            dataUrl: 'bigdata-checked.json'
+        },
         viewportHeight: 0,
         scrollTop: 0,
         scrollHeight: 0,
@@ -32,7 +35,9 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
     /**
      *
      */
-    SVGTree.initialize = function(selector) {
+    SVGTree.initialize = function(selector, settings) {
+        $.extend(SVGTree.settings, settings);
+
         SVGTree.tree = d3.layout.tree();
         SVGTree.svg = d3
             .select(selector)
@@ -46,10 +51,10 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
             .attr('y', 0)
             .style('fill', '#D6E7F7')
             .attr('width', '100%')
-            .attr('height', SVGTree.nodeHeight);
+            .attr('height', SVGTree.settings.nodeHeight);
         SVGTree.container = SVGTree.svg
             .append('g')
-            .attr('transform', 'translate(' + (SVGTree.indentWidth / 2)  + ',' + (SVGTree.nodeHeight / 2) + ')');
+            .attr('transform', 'translate(' + (SVGTree.settings.indentWidth / 2)  + ',' + (SVGTree.settings.nodeHeight / 2) + ')');
         SVGTree.linkElements = SVGTree.container.append('g')
             .attr('class', 'links');
         SVGTree.nodeElements = SVGTree.container.append('g')
@@ -69,13 +74,13 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
         });
 
         document.addEventListener('DOMContentLoaded', function() {
-            FastClick.attach(document.getElementById('body'));
+            FastClick.attach(document.querySelector(selector));
         }, false);
 
         SVGTree.throttledDragmove = _.throttle(function() {
-            var currentRow = (Math.round(( SVGTree.lastDragY / SVGTree.nodeHeight ) * 2) / 2);
-            var dragElementHeight = currentRow % 1 ? 1 : SVGTree.nodeHeight;
-            var dragElementY = (currentRow * SVGTree.nodeHeight) + (currentRow % 1 ? (SVGTree.nodeHeight / 2) : 0);
+            var currentRow = (Math.round(( SVGTree.lastDragY / SVGTree.settings.nodeHeight ) * 2) / 2);
+            var dragElementHeight = currentRow % 1 ? 1 : SVGTree.settings.nodeHeight;
+            var dragElementY = (currentRow * SVGTree.settings.nodeHeight) + (currentRow % 1 ? (SVGTree.settings.nodeHeight / 2) : 0);
             SVGTree.dragElement
                 .attr('visibility', 'visible')
                 .attr('transform', SVGTree.xy({x:0, y: dragElementY}))
@@ -93,13 +98,13 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
     };
 
     SVGTree.loadData = function() {
-        d3.json('bigdata-checked.json', function (error, flare) {
+        d3.json(SVGTree.settings.dataUrl, function (error, flare) {
             if (error) throw error;
             flare = SVGTree.tree.nodes(flare);
             flare.forEach(function(n) {
                 n.open = true;
                 n.hasChildren = (n.children || n._children) ? 1 : 0;
-                if (SVGTree.showCheckboxes) {
+                if (SVGTree.settings.showCheckboxes) {
                     n.indeterminate = SVGTree.isCheckboxIndeterminate(n);
                 }
                 n.parents = [];
@@ -179,8 +184,8 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
         SVGTree.data.icons = [];
         SVGTree.data.nodes.forEach(function(n, i) {
             delete n.children;
-            n.x = n.depth * SVGTree.indentWidth;
-            n.y = i * SVGTree.nodeHeight;
+            n.x = n.depth * SVGTree.settings.indentWidth;
+            n.y = i * SVGTree.settings.nodeHeight;
             if (n.parent) {
                 SVGTree.data.links.push({
                     source: n.parent,
@@ -199,12 +204,12 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
                 delete n.icon;
             }
         });
-        SVGTree.svg.attr('height', SVGTree.data.nodes.length * SVGTree.nodeHeight);
+        SVGTree.svg.attr('height', SVGTree.data.nodes.length * SVGTree.settings.nodeHeight);
     };
 
     SVGTree.update = function() {
-        var visibleRows = Math.ceil(SVGTree.viewportHeight / SVGTree.nodeHeight + 1);
-        var position = Math.floor(Math.max(SVGTree.scrollTop, 0) / SVGTree.nodeHeight);
+        var visibleRows = Math.ceil(SVGTree.viewportHeight / SVGTree.settings.nodeHeight + 1);
+        var position = Math.floor(Math.max(SVGTree.scrollTop, 0) / SVGTree.settings.nodeHeight);
         var visibleNodes = SVGTree.data.nodes.slice(position, position + visibleRows);
 
         var nodes = SVGTree.nodeElements.selectAll('.node').data(visibleNodes);
@@ -229,7 +234,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
             .select('use')
             .attr('xlink:href', SVGTree.updateIconId);
 
-        if (SVGTree.showCheckboxes) {
+        if (SVGTree.settings.showCheckboxes) {
             nodes
                 .select('.check')
                 .attr('checked', SVGTree.updateCheckboxChecked)
@@ -243,7 +248,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
     };
 
     SVGTree.updateTextNode = function(node) {
-        return node.name + (SVGTree.showCheckboxes && node.checked ? ' (checked)' : '');
+        return node.name + (SVGTree.settings.showCheckboxes && node.checked ? ' (checked)' : '');
     };
 
     SVGTree.updateToggleTransform = function(node) {
@@ -337,7 +342,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
             .attr('x', 8)
             .attr('y', -8);
 
-        if (SVGTree.showCheckboxes) {
+        if (SVGTree.settings.showCheckboxes) {
 
             // @todo Check foreignObject/checkbox support on IE/Edge
             // @todo Zooming the page containing the svg does not resize/reposition the checkboxes in Safari
@@ -355,7 +360,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
         // append the text element
         nodeEnter
             .append('text')
-            .attr('dx', SVGTree.showCheckboxes ? 45 : 27)
+            .attr('dx', SVGTree.settings.showCheckboxes ? 45 : 27)
             .attr('dy', 5);
     };
 
@@ -370,7 +375,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
         if (target.hasChildren) {
             path.push('H' + target.x);
         } else {
-            path.push('H' + (target.x + SVGTree.indentWidth / 4));
+            path.push('H' + (target.x + SVGTree.settings.indentWidth / 4));
         }
         return path.join(' ');
     };

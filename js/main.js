@@ -1,3 +1,3 @@
 require(['SVGTree'], function(SVGTree) {
-    SVGTree.initialize('#body');
+    SVGTree.initialize('.bigTreeWithCheckboxes');
 });
