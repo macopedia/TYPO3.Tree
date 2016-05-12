@@ -1,15 +1,3 @@
-body {
-  background-color: #fafafa;
-  margin: 0;
-  font-size: 14px;
-  font-family: "Helvetica Neue", Helvetica;
-}
-
-#body {
-  margin: 0 auto;
-  position: relative;
-}
-
 #chart, #header, #footer {
   position: absolute;
   top: 0;
