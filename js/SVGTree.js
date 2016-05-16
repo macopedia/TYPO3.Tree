@@ -3,441 +3,457 @@
 define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _) {
     'use strict';
 
-    var SVGTree = {
-        settings: {
+    function SVGTree(){
+        this.settings = {
             showCheckboxes: true,
             nodeHeight: 20,
             indentWidth: 16,
             duration: 400,
             dataUrl: 'bigdata-checked.json'
+        };
+
+        this.viewportHeight = 0;
+        this.scrollTop = 0;
+        this.scrollHeight = 0;
+        this.scrollBottom = 0;
+        this.tree = null;
+        this.svg = null;
+        this.iconElements = null;
+        this.dragElement = null;
+        this.container = null;
+        this.linkElements = null;
+        this.nodeElements = null;
+        this.drag = null;
+        this.root = null;
+        this.lastDragY = null;
+        this.throttledDragmove = null;
+        this.data = {};
+        this.visibleRows = 0;
+        this.position = 0;
+        this.visibleNodesCount = 0;
+    }
+
+    SVGTree.prototype = {
+        constructor: SVGTree,
+
+        initialize: function(selector, settings) {
+            $.extend(this.settings, settings);
+            var me = this;
+
+            this.tree = d3.layout.tree();
+            this.svg = d3
+                .select(selector)
+                .append('svg')
+                .attr('version', '1.1');
+            this.iconElements = this.svg.append('defs');
+            this.dragElement = this.svg
+                .append('rect')
+                .attr('visibility', 'hidden')
+                .attr('x', 0)
+                .attr('y', 0)
+                .style('fill', '#D6E7F7')
+                .attr('width', '100%')
+                .attr('height', this.settings.nodeHeight);
+            this.container = this.svg
+                .append('g')
+                .attr('transform', 'translate(' + (this.settings.indentWidth / 2) + ',' + (this.settings.nodeHeight / 2) + ')');
+            this.linkElements = this.container.append('g')
+                .attr('class', 'links');
+            this.nodeElements = this.container.append('g')
+                .attr('class', 'nodes');
+            this.drag = d3.behavior.drag()
+                .origin(Object)
+                .on('dragstart', this.dragstart.bind(me))
+                .on('drag', this.dragmove.bind(me))
+                .on('dragend', this.dragend.bind(me));
+
+            this.updateScrollPosition();
+            this.loadData();
+
+            $(window).on('resize scroll', function () {
+                me.updateScrollPosition();
+                me.update();
+            });
+
+            document.addEventListener('DOMContentLoaded', function () {
+                FastClick.attach(document.querySelector(selector));
+            }, false);
+
+            this.throttledDragmove = _.throttle(function () {
+                var currentRow = (Math.round(( me.lastDragY / me.settings.nodeHeight ) * 2) / 2);
+                var dragElementHeight = currentRow % 1 ? 1 : me.settings.nodeHeight;
+                var dragElementY = (currentRow * me.settings.nodeHeight) + (currentRow % 1 ? (me.settings.nodeHeight / 2) : 0);
+                me.dragElement
+                    .attr('visibility', 'visible')
+                    .attr('transform', this.xy({x: 0, y: dragElementY}))
+                    .attr('height', dragElementHeight);
+            }, 40);
+
+
         },
-        viewportHeight: 0,
-        scrollTop: 0,
-        scrollHeight: 0,
-        scrollBottom: 0,
-        tree: null,
-        svg: null,
-        iconElements: null,
-        dragElement: null,
-        container: null,
-        linkElements: null,
-        nodeElements: null,
-        drag: null,
-        root: null,
-        lastDragY: null,
-        throttledDragmove: null,
-        data: {},
-        visibleRows: 0,
-        position: 0,
-        visibleNodesCount: 0
-    };
 
-    /**
-     *
-     */
-    SVGTree.initialize = function(selector, settings) {
-        $.extend(SVGTree.settings, settings);
+        updateScrollPosition: function(){
+            this.viewportHeight = parseInt(window.innerHeight);
+            this.scrollTop = Math.max(0, window.pageYOffset - (this.viewportHeight / 2));
+            this.scrollHeight = parseInt(window.document.body.clientHeight);
+            this.scrollBottom = this.scrollTop + this.viewportHeight + (this.viewportHeight / 2);
+            this.viewportHeight = this.viewportHeight * 1.5;
+        },
 
-        SVGTree.tree = d3.layout.tree();
-        SVGTree.svg = d3
-            .select(selector)
-            .append('svg')
-            .attr('version', '1.1');
-        SVGTree.iconElements = SVGTree.svg.append('defs');
-        SVGTree.dragElement = SVGTree.svg
-            .append('rect')
-            .attr('visibility', 'hidden')
-            .attr('x', 0)
-            .attr('y', 0)
-            .style('fill', '#D6E7F7')
-            .attr('width', '100%')
-            .attr('height', SVGTree.settings.nodeHeight);
-        SVGTree.container = SVGTree.svg
-            .append('g')
-            .attr('transform', 'translate(' + (SVGTree.settings.indentWidth / 2)  + ',' + (SVGTree.settings.nodeHeight / 2) + ')');
-        SVGTree.linkElements = SVGTree.container.append('g')
-            .attr('class', 'links');
-        SVGTree.nodeElements = SVGTree.container.append('g')
-            .attr('class', 'nodes');
-        SVGTree.drag = d3.behavior.drag()
-            .origin(Object)
-            .on('dragstart', SVGTree.dragstart)
-            .on('drag', SVGTree.dragmove)
-            .on('dragend', SVGTree.dragend);
-
-        SVGTree.updateScrollPosition();
-        SVGTree.loadData();
-
-        $(window).on('resize scroll', function() {
-            SVGTree.updateScrollPosition();
-            SVGTree.update();
-        });
-
-        document.addEventListener('DOMContentLoaded', function() {
-            FastClick.attach(document.querySelector(selector));
-        }, false);
-
-        SVGTree.throttledDragmove = _.throttle(function() {
-            var currentRow = (Math.round(( SVGTree.lastDragY / SVGTree.settings.nodeHeight ) * 2) / 2);
-            var dragElementHeight = currentRow % 1 ? 1 : SVGTree.settings.nodeHeight;
-            var dragElementY = (currentRow * SVGTree.settings.nodeHeight) + (currentRow % 1 ? (SVGTree.settings.nodeHeight / 2) : 0);
-            SVGTree.dragElement
-                .attr('visibility', 'visible')
-                .attr('transform', SVGTree.xy({x:0, y: dragElementY}))
-                .attr('height', dragElementHeight);
-        }, 40);
-
-    };
-
-    SVGTree.updateScrollPosition = function() {
-        SVGTree.viewportHeight = parseInt(window.innerHeight);
-        SVGTree.scrollTop = Math.max(0, window.pageYOffset - (SVGTree.viewportHeight / 2));
-        SVGTree.scrollHeight = parseInt(window.document.body.clientHeight);
-        SVGTree.scrollBottom = SVGTree.scrollTop + SVGTree.viewportHeight + (SVGTree.viewportHeight / 2);
-        SVGTree.viewportHeight = SVGTree.viewportHeight * 1.5;
-    };
-
-    SVGTree.loadData = function() {
-        d3.json(SVGTree.settings.dataUrl, function (error, flare) {
-            if (error) throw error;
-            flare = SVGTree.tree.nodes(flare);
-            flare.forEach(function(n) {
-                n.open = true;
-                n.hasChildren = (n.children || n._children) ? 1 : 0;
-                if (SVGTree.settings.showCheckboxes) {
-                    n.indeterminate = SVGTree.isCheckboxIndeterminate(n);
-                }
-                n.parents = [];
-                n._isDragged = false;
-                if (n.parent) {
-                    var x = n;
-                    while (x && x.parent) {
-                        if (x.parent.identifier) {
-                            n.parents.push(x.parent.identifier);
-                        }
-                        x = x.parent;
+        loadData: function(){
+            var me = this;
+            d3.json(this.settings.dataUrl, function (error, flare) {
+                if (error) throw error;
+                flare = me.tree.nodes(flare);
+                flare.forEach(function(n) {
+                    n.open = true;
+                    n.hasChildren = (n.children || n._children) ? 1 : 0;
+                    if (me.settings.showCheckboxes) {
+                        n.indeterminate = me.isCheckboxIndeterminate(n);
                     }
+                    n.parents = [];
+                    n._isDragged = false;
+                    if (n.parent) {
+                        var x = n;
+                        while (x && x.parent) {
+                            if (x.parent.identifier) {
+                                n.parents.push(x.parent.identifier);
+                            }
+                            x = x.parent;
+                        }
+                    }
+                });
+                me.root = flare;
+                me.renderData();
+                me.update();
+            });
+        },
+
+        isCheckboxIndeterminate: function(n) {
+            /**
+             * Display states for the node
+             *
+             * checked: node is checked
+             * unchecked: node is unchecked and all children are unchecked
+             * indeterminate: node is unchecked and at least one child is checked
+             *
+             */
+
+            // indeterminate status already known
+            if (typeof n.indeterminate === 'boolean') {
+                return n.indeterminate;
+            }
+
+            // if a node has no children it cannot be indeterminate, if it is checked itself don't hide that by overlaying with indeterminate state
+            if (!n.children || n.checked) {
+                return false;
+            }
+
+            return this.hasCheckedChildren(n);
+        },
+
+        // recursive function to check if at least child is checked
+        hasCheckedChildren: function(n) {
+            var me = this;
+
+            if (!n.children) {
+                return n.checked;
+            }
+
+            var hasCheckedChildren = false;
+            n.children.some(function (child) {
+                hasCheckedChildren = me.hasCheckedChildren(child);
+                // save child's indeterminate status to speed up detection
+                child.indeterminate = (!child.children || child.checked) ? false : hasCheckedChildren;
+
+                // return in some() skips rest if true
+                return hasCheckedChildren;
+            });
+            return hasCheckedChildren;
+        },
+
+        renderData: function() {
+            var me = this;
+
+            var blacklist = {};
+            this.root.forEach(function(node) {
+                if (!node.open) {
+                    blacklist[node.identifier] = true;
                 }
             });
-            SVGTree.root = flare;
-            SVGTree.renderData();
-            SVGTree.update();
-        });
-    };
-
-    SVGTree.isCheckboxIndeterminate = function(n) {
-        /**
-         * Display states for the node
-         *
-         * checked: node is checked
-         * unchecked: node is unchecked and all children are unchecked
-         * indeterminate: node is unchecked and at least one child is checked
-         *
-         */
-
-        // indeterminate status already known
-        if (typeof n.indeterminate === 'boolean') {
-            return n.indeterminate;
-        }
-
-        // if a node has no children it cannot be indeterminate, if it is checked itself don't hide that by overlaying with indeterminate state
-        if (!n.children || n.checked) {
-            return false;
-        }
-
-        return SVGTree.hasCheckedChildren(n);
-    };
-
-    // recursive function to check if at least child is checked
-    SVGTree.hasCheckedChildren = function(n) {
-
-        if (!n.children) {
-            return n.checked;
-        }
-
-        var hasCheckedChildren = false;
-        n.children.some(function (child) {
-            hasCheckedChildren = SVGTree.hasCheckedChildren(child);
-            // save child's indeterminate status to speed up detection
-            child.indeterminate = (!child.children || child.checked) ? false : hasCheckedChildren;
-
-            // return in some() skips rest if true
-            return hasCheckedChildren;
-        });
-        return hasCheckedChildren;
-    };
-
-    SVGTree.renderData = function() {
-        var blacklist = {};
-        SVGTree.root.forEach(function(node) {
-            if (!node.open) {
-                blacklist[node.identifier] = true;
-            }
-        });
-        SVGTree.data.nodes = SVGTree.root.filter(function(node) {
-            return !node.parents.some(function(id) {
-                return Boolean(blacklist[id]);
-            });
-        });
-        var iconHashes = [];
-        SVGTree.data.links = [];
-        SVGTree.data.icons = [];
-        SVGTree.data.nodes.forEach(function(n, i) {
-            delete n.children;
-            n.x = n.depth * SVGTree.settings.indentWidth;
-            n.y = i * SVGTree.settings.nodeHeight;
-            if (n.parent) {
-                SVGTree.data.links.push({
-                    source: n.parent,
-                    target: n
+            this.data.nodes = this.root.filter(function(node) {
+                return !node.parents.some(function(id) {
+                    return Boolean(blacklist[id]);
                 });
-            }
-            if (!n.iconHash) {
-                n.iconHash = Math.abs(SVGTree.hashCode(n.icon));
-                if (iconHashes.indexOf(n.iconHash) === -1) {
-                    iconHashes.push(n.iconHash);
-                    SVGTree.data.icons.push({
-                        identifier: n.iconHash,
-                        icon: n.icon
+            });
+            var iconHashes = [];
+            this.data.links = [];
+            this.data.icons = [];
+            this.data.nodes.forEach(function(n, i) {
+                delete n.children;
+                n.x = n.depth * me.settings.indentWidth;
+                n.y = i * me.settings.nodeHeight;
+                if (n.parent) {
+                    me.data.links.push({
+                        source: n.parent,
+                        target: n
                     });
                 }
-                delete n.icon;
+                if (!n.iconHash) {
+                    n.iconHash = Math.abs(me.hashCode(n.icon));
+                    if (iconHashes.indexOf(n.iconHash) === -1) {
+                        iconHashes.push(n.iconHash);
+                        me.data.icons.push({
+                            identifier: n.iconHash,
+                            icon: n.icon
+                        });
+                    }
+                    delete n.icon;
+                }
+            });
+            this.svg.attr('height', this.data.nodes.length * this.settings.nodeHeight);
+        },
+
+        update: function() {
+            var me = this;
+            var visibleRows = Math.ceil(this.viewportHeight / this.settings.nodeHeight + 1);
+            var position = Math.floor(Math.max(this.scrollTop, 0) / this.settings.nodeHeight);
+            var visibleNodes = this.data.nodes.slice(position, position + visibleRows);
+
+            var nodes = this.nodeElements.selectAll('.node').data(visibleNodes);
+
+            if (this.visibleRows !== visibleRows || this.position !== position || this.visibleNodesCount !== visibleNodes.length) {
+                this.visibleRows = visibleRows;
+                this.position = position;
+                this.visibleNodesCount = visibleNodes.length;
+                this.updateSVGElements(nodes);
             }
-        });
-        SVGTree.svg.attr('height', SVGTree.data.nodes.length * SVGTree.settings.nodeHeight);
-    };
 
-    SVGTree.update = function() {
-        var visibleRows = Math.ceil(SVGTree.viewportHeight / SVGTree.settings.nodeHeight + 1);
-        var position = Math.floor(Math.max(SVGTree.scrollTop, 0) / SVGTree.settings.nodeHeight);
-        var visibleNodes = SVGTree.data.nodes.slice(position, position + visibleRows);
-
-        var nodes = SVGTree.nodeElements.selectAll('.node').data(visibleNodes);
-
-        if (SVGTree.visibleRows !== visibleRows || SVGTree.position !== position || SVGTree.visibleNodesCount !== visibleNodes.length) {
-            SVGTree.visibleRows = visibleRows;
-            SVGTree.position = position;
-            SVGTree.visibleNodesCount = visibleNodes.length;
-            SVGTree.updateSVGElements(nodes);
-        }
-
-        // update
-        nodes
-            .attr('transform', SVGTree.xy)
-            .select('text')
-            .text(SVGTree.updateTextNode);
-        nodes
-            .select('.toggle')
-            .attr('transform', SVGTree.updateToggleTransform)
-            .attr('visibility', SVGTree.updateToggleVisibility);
-        nodes
-            .select('use')
-            .attr('xlink:href', SVGTree.updateIconId);
-
-        if (SVGTree.settings.showCheckboxes) {
+            // update
             nodes
-                .select('.check')
-                .attr('checked', SVGTree.updateCheckboxChecked)
-                .property('indeterminate', SVGTree.updateCheckboxIndeterminate);
-        }
+                .attr('transform', this.xy)
+                .select('text')
+                .text(this.updateTextNode.bind(me));
+            nodes
+                .select('.toggle')
+                .attr('transform', this.updateToggleTransform)
+                .attr('visibility', this.updateToggleVisibility);
+            nodes
+                .select('use')
+                .attr('xlink:href', this.updateIconId);
 
-        // delete
-        nodes
-            .exit()
-            .remove();
-    };
+            if (this.settings.showCheckboxes) {
+                nodes
+                    .select('.check')
+                    .attr('checked', this.updateCheckboxChecked)
+                    .property('indeterminate', this.updateCheckboxIndeterminate);
+            }
 
-    SVGTree.updateTextNode = function(node) {
-        return node.name + (SVGTree.settings.showCheckboxes && node.checked ? ' (checked)' : '');
-    };
+            // delete
+            nodes
+                .exit()
+                .remove();
 
-    SVGTree.updateToggleTransform = function(node) {
-        return node.open ? 'translate(8 -8) rotate(90)' : 'translate(-8 -8) rotate(0)' ;
-    };
 
-    SVGTree.updateToggleVisibility = function(node) {
-        return node.hasChildren ? 'visible' : 'hidden';
-    };
+        },
 
-    SVGTree.updateIconId = function(node) {
-        return '#icon-' + node.iconHash;
-    };
+        updateTextNode: function(node) {
+            return node.name + (this.settings.showCheckboxes && node.checked ? ' (checked)' : '');
+        },
 
-    SVGTree.updateCheckboxChecked = function(node) {
-        return node.checked ? 'checked' : null;
-    };
-    SVGTree.updateCheckboxIndeterminate = function(node) {
-        return node.indeterminate;
-    };
+        updateToggleTransform: function(node) {
+            return node.open ? 'translate(8 -8) rotate(90)' : 'translate(-8 -8) rotate(0)' ;
+        },
 
-    SVGTree.updateSVGElements = function(nodes) {
+        updateToggleVisibility: function(node) {
+            return node.hasChildren ? 'visible' : 'hidden';
+        },
 
-        var icons = SVGTree.iconElements
-            .selectAll('.icon-def')
-            .data(SVGTree.data.icons, function (i) {
-                return i.identifier;
+        updateIconId: function(node) {
+            return '#icon-' + node.iconHash;
+        },
+
+        updateCheckboxChecked: function(node) {
+            return node.checked ? 'checked' : null;
+        },
+
+        updateCheckboxIndeterminate: function(node) {
+            return node.indeterminate;
+        },
+
+        updateSVGElements: function(nodes) {
+            var me = this;
+
+            var icons = this.iconElements
+                .selectAll('.icon-def')
+                .data(this.data.icons, function (i) {
+                    return i.identifier;
+                });
+
+            icons
+                .enter()
+                .append('g')
+                .attr('class', 'icon-def')
+                .attr('id', function (i) {
+                    return 'icon-' + i.identifier;
+                })
+                .html(function (i) {
+                    return i.icon.replace('<svg', '<g').replace('/svg>', '/g>');
+                });
+
+            var visibleLinks = this.data.links.filter(function(d) {
+                return d.source.y <= me.scrollBottom && me.scrollTop <= d.target.y;
             });
 
-        icons
-            .enter()
-            .append('g')
-            .attr('class', 'icon-def')
-            .attr('id', function (i) {
-                return 'icon-' + i.identifier;
-            })
-            .html(function (i) {
-                return i.icon.replace('<svg', '<g').replace('/svg>', '/g>');
-            });
+            var links = this.linkElements
+                .selectAll('.link')
+                .data(visibleLinks);
 
-        var visibleLinks = SVGTree.data.links.filter(function(d) {
-            return d.source.y <= SVGTree.scrollBottom && SVGTree.scrollTop <= d.target.y;
-        });
+            // create
+            links
+                .enter()
+                .append('path')
+                .attr('class', 'link');
 
-        var links = SVGTree.linkElements
-            .selectAll('.link')
-            .data(visibleLinks);
+            // update
+            links
+                .attr('d', this.squaredDiagonal.bind(me));
 
-        // create
-        links
-            .enter()
-            .append('path')
-            .attr('class', 'link');
+            // delete
+            links
+                .exit()
+                .remove();
 
-        // update
-        links
-            .attr('d', SVGTree.squaredDiagonal);
+            // create the node elements
+            var nodeEnter = nodes
+                .enter()
+                .append('g')
+                .attr('class', 'node')
+                .attr('transform', this.xy)
+                .call(this.drag);
 
-        // delete
-        links
-            .exit()
-            .remove();
+            // append the chevron element
+            var chevron = nodeEnter
+                .append('g')
+                .attr('class', 'toggle')
+                .on('click', this.chevronClick.bind(me));
 
-        // create the node elements
-        var nodeEnter = nodes
-            .enter()
-            .append('g')
-            .attr('class', 'node')
-            .attr('transform', SVGTree.xy)
-            .call(SVGTree.drag);
+            // improve usability by making the click area a 16px square
+            chevron
+                .append('path')
+                .style('opacity', 0)
+                .attr('d', 'M 0 0 L 16 0 L 16 16 L 0 16 Z');
+            chevron
+                .append('path')
+                .attr('class', 'chevron')
+                .attr('d', 'M 4 3 L 13 8 L 4 13 Z');
 
-        // append the chevron element
-        var chevron = nodeEnter
-            .append('g')
-            .attr('class', 'toggle')
-            .on('click', SVGTree.chevronClick);
-
-        // improve usability by making the click area a 16px square
-        chevron
-            .append('path')
-            .style('opacity', 0)
-            .attr('d', 'M 0 0 L 16 0 L 16 16 L 0 16 Z');
-        chevron
-            .append('path')
-            .attr('class', 'chevron')
-            .attr('d', 'M 4 3 L 13 8 L 4 13 Z');
-
-        // append the icon element
-        nodeEnter
-            .append('use')
-            .attr('x', 8)
-            .attr('y', -8);
-
-        if (SVGTree.settings.showCheckboxes) {
-
-            // @todo Check foreignObject/checkbox support on IE/Edge
-            // @todo Zooming the page containing the svg does not resize/reposition the checkboxes in Safari
+            // append the icon element
             nodeEnter
-                .append('foreignObject')
-                .attr('x', 24)
-                .attr('y', -8)
-                .attr('width', 20)
-                .attr('height', 20)
-                .append("xhtml:div")
-                .html('<input class="check" type="checkbox">');
+                .append('use')
+                .attr('x', 8)
+                .attr('y', -8);
+
+            if (this.settings.showCheckboxes) {
+
+                // @todo Check foreignObject/checkbox support on IE/Edge
+                // @todo Zooming the page containing the svg does not resize/reposition the checkboxes in Safari
+                nodeEnter
+                    .append('foreignObject')
+                    .attr('x', 24)
+                    .attr('y', -8)
+                    .attr('width', 20)
+                    .attr('height', 20)
+                    .append("xhtml:div")
+                    .html('<input class="check" type="checkbox">');
+            }
+
+
+            // append the text element
+            nodeEnter
+                .append('text')
+                .attr('dx', this.settings.showCheckboxes ? 45 : 27)
+                .attr('dy', 5);
+        },
+
+        squaredDiagonal: function(d) {
+            var me = this;
+
+            var target = {
+                x: d.target._isDragged ? d.target._x : d.target.x,
+                y: d.target._isDragged ? d.target._y : d.target.y
+            };
+            var path = [];
+            path.push('M' + d.source.x + ' ' + d.source.y);
+            path.push('V' + target.y);
+            if (target.hasChildren) {
+                path.push('H' + target.x);
+            } else {
+                path.push('H' + (target.x + me.settings.indentWidth / 4));
+            }
+            return path.join(' ');
+        },
+
+        xy: function(d) {
+            return 'translate(' + d.x + ',' + d.y + ')';
+        },
+
+        hashCode: function(s) {
+            return s.split('')
+                .reduce(function(a,b) {
+                    a = ((a<<5)-a) + b.charCodeAt(0);
+                    return a&a
+                }, 0);
+        },
+
+        chevronClick: function(d) {
+            if (d.open) {
+                this.hideChildren(d);
+            } else {
+                this.showChildren(d);
+            }
+            this.update();
+        },
+
+        dragstart: function(d) {
+            d._isDragged = true;
+        },
+
+        dragmove: function(d) {
+            this.lastDragY = d3.event.y;
+            this.throttledDragmove(d);
+        },
+
+        dragend: function(d) {
+            d._isDragged = false;
+            this.dragElement
+                .attr('visibility', 'hidden');
+            // var currentRow = (Math.round(( lastDragY / nodeHeight ) * 2) / 2);
+            // var elementBeforePosition = Math.floor(currentRow);
+            // var elementBefore = root[elementBeforePosition];
+            // var elementAfter = root[elementBeforePosition + 1];
+            // if (currentRow % 1) {
+            //     insertBetween(elementBefore, elementAfter);
+            // } else {
+            //
+            // }
+        },
+
+        hideChildren: function(d) {
+            d.open = false;
+            this.renderData();
+            this.update();
+        },
+
+        showChildren: function(d) {
+            d.open = true;
+            this.renderData();
+            this.update();
+        },
+
+        insertBetween: function(before, after) {
+
         }
-
-
-        // append the text element
-        nodeEnter
-            .append('text')
-            .attr('dx', SVGTree.settings.showCheckboxes ? 45 : 27)
-            .attr('dy', 5);
-    };
-
-    SVGTree.squaredDiagonal = function(d) {
-        var target = {
-            x: d.target._isDragged ? d.target._x : d.target.x,
-            y: d.target._isDragged ? d.target._y : d.target.y
-        };
-        var path = [];
-        path.push('M' + d.source.x + ' ' + d.source.y);
-        path.push('V' + target.y);
-        if (target.hasChildren) {
-            path.push('H' + target.x);
-        } else {
-            path.push('H' + (target.x + SVGTree.settings.indentWidth / 4));
-        }
-        return path.join(' ');
-    };
-
-    SVGTree.xy = function(d) {
-        return 'translate(' + d.x + ',' + d.y + ')';
-    };
-
-    SVGTree.hashCode = function(s) {
-        return s.split('')
-            .reduce(function(a,b) {
-                a = ((a<<5)-a) + b.charCodeAt(0);
-                return a&a
-            }, 0);
-    };
-
-    SVGTree.chevronClick = function(d) {
-        if (d.open) {
-            SVGTree.hideChildren(d);
-        } else {
-            SVGTree.showChildren(d);
-        }
-        SVGTree.update();
-    };
-
-    SVGTree.dragstart = function(d) {
-        d._isDragged = true;
-    };
-
-    SVGTree.dragmove = function(d) {
-        SVGTree.lastDragY = d3.event.y;
-        SVGTree.throttledDragmove(d);
-    };
-
-    SVGTree.dragend = function(d) {
-        d._isDragged = false;
-        SVGTree.dragElement
-            .attr('visibility', 'hidden');
-        // var currentRow = (Math.round(( lastDragY / nodeHeight ) * 2) / 2);
-        // var elementBeforePosition = Math.floor(currentRow);
-        // var elementBefore = root[elementBeforePosition];
-        // var elementAfter = root[elementBeforePosition + 1];
-        // if (currentRow % 1) {
-        //     insertBetween(elementBefore, elementAfter);
-        // } else {
-        //
-        // }
-    };
-
-    SVGTree.hideChildren = function(d) {
-        d.open = false;
-        SVGTree.renderData();
-        SVGTree.update();
-    };
-
-    SVGTree.showChildren = function(d) {
-        d.open = true;
-        SVGTree.renderData();
-        SVGTree.update();
-    };
-
-    SVGTree.insertBetween = function(before, after) {
 
     };
 

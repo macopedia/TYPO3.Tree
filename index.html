@@ -3,21 +3,21 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link type="text/css" rel="stylesheet" href="/bower_components/bootstrap/dist/css/bootstrap.css"/>
-    <link type="text/css" rel="stylesheet" href="/bower_components/font-awesome/css/font-awesome.css"/>
+    <link type="text/css" rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.css"/>
+    <link type="text/css" rel="stylesheet" href="bower_components/font-awesome/css/font-awesome.css"/>
 
-    <link type="text/css" rel="stylesheet" href="/css/style.css"/>
+    <link type="text/css" rel="stylesheet" href="css/style.css"/>
 
     <title>SVGTree</title>
     <script type="text/javascript">
         var requirejs = {
-            baseUrl: '/js',
+            baseUrl: 'js',
             paths: {
-                jquery: '/bower_components/jquery/dist/jquery.min',
-                FastClick: '/bower_components/fastclick/lib/fastclick',
-                underscore: '/bower_components/underscore/underscore',
-                d3: '/bower_components/d3/d3',
-                bootstrap: '/bower_components/bootstrap/dist/js/bootstrap.min.js'
+                jquery: '../bower_components/jquery/dist/jquery.min',
+                FastClick: '../bower_components/fastclick/lib/fastclick',
+                underscore: '../bower_components/underscore/underscore',
+                d3: '../bower_components/d3/d3',
+                bootstrap: '../bower_components/bootstrap/dist/js/bootstrap.min.js'
             }
         };
     </script>
@@ -25,10 +25,21 @@
 
 </head>
 <body>
-    <h1>SVG tree examples</h1>
-    <div class="col-md-4">
-        <h2>Big tree with checkboxes</h2>
-        <div class="bigTreeWithCheckboxes"></div>
+    <div class="container-fluid">
+        <h1>SVG tree examples</h1>
+        <div class="row">
+            <div class="col-md-4">
+                <h2>Big tree with checkboxes</h2>
+                <div class="bigTreeWithCheckboxes"></div>
+            </div>
+
+            <div class="col-md-4">
+                <h2>Big tree second</h2>
+                <div class="bigTreeSecond"></div>
+            </div>
+        </div>
     </div>
+
+
 </body>
 </html>
