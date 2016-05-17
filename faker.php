@@ -1,5 +1,4 @@
 <?php
-
 $words = explode("\r", file_get_contents(__DIR__ . '/words.txt'));
 $words = array_map('trim', $words);
 $wordsCount = count($words);
@@ -38,7 +37,7 @@ function fakeChildren($depth = 0) {
 function fakeRecord($depth = 0) {
     global $words, $wordsCount, $icons, $iconCount;
     $record = [
-        'identifier' => uniqid(),
+        'identifier' =>  str_replace('.', '', uniqid('', true)),
         'name' => $words[rand(0, $wordsCount - 1)],
         'icon' => $icons[rand(0, $iconCount - 1)],
         'checked' => rand(0, 1) === 1
