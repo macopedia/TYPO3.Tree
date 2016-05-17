@@ -5,11 +5,12 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
 
     function SVGTree(){
         this.settings = {
-            showCheckboxes: true,
+            showCheckboxes: false,
+            showIcons: false,
             nodeHeight: 20,
             indentWidth: 16,
             duration: 400,
-            dataUrl: 'bigdata-checked.json'
+            dataUrl: 'tree-configuration.json'
         };
 
         this.viewportHeight = 0;
@@ -45,7 +46,6 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
                 .select(selector)
                 .append('svg')
                 .attr('version', '1.1');
-            this.iconElements = this.svg.append('defs');
             this.dragElement = this.svg
                 .append('rect')
                 .attr('visibility', 'hidden')
@@ -66,6 +66,11 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
                 .on('dragstart', this.dragstart.bind(me))
                 .on('drag', this.dragmove.bind(me))
                 .on('dragend', this.dragend.bind(me));
+
+            if (this.settings.showIcons) {
+                this.iconElements = this.svg.append('defs');
+            }
+
 
             this.updateScrollPosition();
             this.loadData();
@@ -199,7 +204,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
                         target: n
                     });
                 }
-                if (!n.iconHash) {
+                if (!n.iconHash && me.settings.showIcons) {
                     n.iconHash = Math.abs(me.hashCode(n.icon));
                     if (iconHashes.indexOf(n.iconHash) === -1) {
                         iconHashes.push(n.iconHash);
@@ -238,9 +243,12 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
                 .select('.toggle')
                 .attr('transform', this.updateToggleTransform)
                 .attr('visibility', this.updateToggleVisibility);
-            nodes
-                .select('use')
-                .attr('xlink:href', this.updateIconId);
+
+            if (this.settings.showIcons) {
+                nodes
+                    .select('use')
+                    .attr('xlink:href', this.updateIconId);
+            }
 
             if (this.settings.showCheckboxes) {
                 nodes
@@ -283,24 +291,25 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
 
         updateSVGElements: function(nodes) {
             var me = this;
+            var textPosition = 10;
 
-            var icons = this.iconElements
-                .selectAll('.icon-def')
-                .data(this.data.icons, function (i) {
-                    return i.identifier;
-                });
-
-            icons
-                .enter()
-                .append('g')
-                .attr('class', 'icon-def')
-                .attr('id', function (i) {
-                    return 'icon-' + i.identifier;
-                })
-                .html(function (i) {
-                    return i.icon.replace('<svg', '<g').replace('/svg>', '/g>');
-                });
-
+            if(me.settings.showIcons) {
+                var icons = this.iconElements
+                    .selectAll('.icon-def')
+                    .data(this.data.icons, function (i) {
+                        return i.identifier;
+                    });
+                icons
+                    .enter()
+                    .append('g')
+                    .attr('class', 'icon-def')
+                    .attr('id', function (i) {
+                        return 'icon-' + i.identifier;
+                    })
+                    .html(function (i) {
+                        return i.icon.replace('<svg', '<g').replace('/svg>', '/g>');
+                    });
+            }
             var visibleLinks = this.data.links.filter(function(d) {
                 return d.source.y <= me.scrollBottom && me.scrollTop <= d.target.y;
             });
@@ -349,18 +358,21 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
                 .attr('d', 'M 4 3 L 13 8 L 4 13 Z');
 
             // append the icon element
-            nodeEnter
-                .append('use')
-                .attr('x', 8)
-                .attr('y', -8);
+            if (this.settings.showIcons) {
+                textPosition = 30;
+                nodeEnter
+                    .append('use')
+                    .attr('x', 8)
+                    .attr('y', -8);
+            }
 
             if (this.settings.showCheckboxes) {
-
+                textPosition = 45;
                 // @todo Check foreignObject/checkbox support on IE/Edge
                 // @todo Zooming the page containing the svg does not resize/reposition the checkboxes in Safari
                 nodeEnter
                     .append('foreignObject')
-                    .attr('x', 24)
+                    .attr('x', 28)
                     .attr('y', -8)
                     .attr('width', 20)
                     .attr('height', 20)
@@ -372,7 +384,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
             // append the text element
             nodeEnter
                 .append('text')
-                .attr('dx', this.settings.showCheckboxes ? 45 : 27)
+                .attr('dx', textPosition)
                 .attr('dy', 5);
         },
 
