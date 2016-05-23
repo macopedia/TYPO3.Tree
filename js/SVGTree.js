@@ -107,10 +107,10 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
 
         loadData: function(){
             var me = this;
-            d3.json(this.settings.dataUrl, function (error, flare) {
+            d3.json(this.settings.dataUrl, function (error, json) {
                 if (error) throw error;
-                flare = me.tree.nodes(flare);
-                flare.forEach(function(n) {
+                json = me.tree.nodes(json);
+                json.forEach(function(n) {
                     n.open = true;
                     n.hasChildren = (n.children || n._children) ? 1 : 0;
                     if (me.settings.showCheckboxes) {
@@ -128,7 +128,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
                         }
                     }
                 });
-                me.root = flare;
+                me.root = json;
                 me.renderData();
                 me.update();
             });
