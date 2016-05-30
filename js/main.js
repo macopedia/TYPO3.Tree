@@ -1,23 +1,23 @@
-require(['SVGTree'], function(SVGTree) {
-    var treeConfiguration = new SVGTree;
+require(['SvgTree', 'CategoryTree'], function(SvgTree, CategoryTree) {
+    var treeConfiguration = new SvgTree;
     treeConfiguration.initialize('.tree-configuration', {
         'dataUrl': 'tree-configuration.json'
     });
 
-    var treeCategory = new SVGTree;
+    var treeCategory = new CategoryTree;
     treeCategory.initialize('.tree-category', {
         'dataUrl': 'tree-category.json',
         'showCheckboxes': true,
         'showIcons': true
     });
 
-    var treePage = new SVGTree;
+    var treePage = new SvgTree;
     treePage.initialize('.tree-page', {
         'dataUrl': 'tree-page.json',
         'showIcons': true
     });
 
-    var treeFolder = new SVGTree;
+    var treeFolder = new SvgTree;
     treeFolder.initialize('.tree-folder', {
         'dataUrl': 'tree-folder.json',
         'showIcons': true

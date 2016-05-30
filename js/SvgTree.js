@@ -3,7 +3,7 @@
 define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _) {
     'use strict';
 
-    function SVGTree(){
+    function SvgTree(){
         this.settings = {
             showCheckboxes: false,
             showIcons: false,
@@ -34,8 +34,8 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
         this.visibleNodesCount = 0;
     }
 
-    SVGTree.prototype = {
-        constructor: SVGTree,
+    SvgTree.prototype = {
+        constructor: SvgTree,
 
         initialize: function(selector, settings) {
             $.extend(this.settings, settings);
@@ -109,6 +109,10 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
             var me = this;
             d3.json(this.settings.dataUrl, function (error, json) {
                 if (error) throw error;
+                if (Array.isArray(json)) {
+                    //little hack, so we can use json structure prepared by ExtJsJsonTreeRenderer
+                    json = json[0];
+                }
                 json = me.tree.nodes(json);
                 json.forEach(function(n) {
                     n.open = true;
@@ -469,5 +473,5 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
 
     };
 
-    return SVGTree;
+    return SvgTree;
 });
