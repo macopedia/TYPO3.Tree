@@ -1,4 +1,4 @@
-require(['SvgTree', 'CategoryTree'], function(SvgTree, CategoryTree) {
+require(['SvgTree', 'CategoryTree', 'PageTree'], function(SvgTree, CategoryTree, PageTree) {
     var treeConfiguration = new SvgTree;
     treeConfiguration.initialize('.tree-configuration', {
         'dataUrl': 'tree-configuration.json'
@@ -11,7 +11,7 @@ require(['SvgTree', 'CategoryTree'], function(SvgTree, CategoryTree) {
         'showIcons': true
     });
 
-    var treePage = new SvgTree;
+    var treePage = new PageTree;
     treePage.initialize('.tree-page', {
         'dataUrl': 'tree-page.json',
         'showIcons': true

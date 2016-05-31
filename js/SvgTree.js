@@ -3,7 +3,9 @@
 define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _) {
     'use strict';
 
-    function SvgTree(){
+
+
+    var SvgTree = function(){
         this.settings = {
             showCheckboxes: false,
             showIcons: false,
@@ -32,7 +34,8 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
         this.visibleRows = 0;
         this.position = 0;
         this.visibleNodesCount = 0;
-    }
+        this.dispatch = null;
+    };
 
     SvgTree.prototype = {
         constructor: SvgTree,
@@ -40,7 +43,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
         initialize: function(selector, settings) {
             $.extend(this.settings, settings);
             var me = this;
-
+            this.dispatch = d3.dispatch('updateNodes', 'prepareLoadedNode');
             this.tree = d3.layout.tree();
             this.svg = d3
                 .select(selector)
@@ -117,9 +120,6 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
                 json.forEach(function(n) {
                     n.open = true;
                     n.hasChildren = (n.children || n._children) ? 1 : 0;
-                    if (me.settings.showCheckboxes) {
-                        n.indeterminate = me.isCheckboxIndeterminate(n);
-                    }
                     n.parents = [];
                     n._isDragged = false;
                     if (n.parent) {
@@ -131,6 +131,8 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
                             x = x.parent;
                         }
                     }
+                    //dispatch event
+                    me.dispatch.prepareLoadedNode.call(me, n);
                 });
                 me.root = json;
                 me.renderData();
@@ -138,48 +140,8 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
             });
         },
 
-        isCheckboxIndeterminate: function(n) {
-            /**
-             * Display states for the node
-             *
-             * checked: node is checked
-             * unchecked: node is unchecked and all children are unchecked
-             * indeterminate: node is unchecked and at least one child is checked
-             *
-             */
-
-            // indeterminate status already known
-            if (typeof n.indeterminate === 'boolean') {
-                return n.indeterminate;
-            }
-
-            // if a node has no children it cannot be indeterminate, if it is checked itself don't hide that by overlaying with indeterminate state
-            if (!n.children || n.checked) {
-                return false;
-            }
-
-            return this.hasCheckedChildren(n);
-        },
-
         // recursive function to check if at least child is checked
-        hasCheckedChildren: function(n) {
-            var me = this;
-
-            if (!n.children) {
-                return n.checked;
-            }
-
-            var hasCheckedChildren = false;
-            n.children.some(function (child) {
-                hasCheckedChildren = me.hasCheckedChildren(child);
-                // save child's indeterminate status to speed up detection
-                child.indeterminate = (!child.children || child.checked) ? false : hasCheckedChildren;
-
-                // return in some() skips rest if true
-                return hasCheckedChildren;
-            });
-            return hasCheckedChildren;
-        },
+        
 
         renderData: function() {
             var me = this;
@@ -254,12 +216,8 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
                     .attr('xlink:href', this.updateIconId);
             }
 
-            if (this.settings.showCheckboxes) {
-                nodes
-                    .select('.check')
-                    .attr('checked', this.updateCheckboxChecked)
-                    .property('indeterminate', this.updateCheckboxIndeterminate);
-            }
+            //dispatch event
+            this.dispatch.updateNodes.call(this, nodes);
 
             // delete
             nodes
@@ -270,7 +228,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
         },
 
         updateTextNode: function(node) {
-            return node.name + (this.settings.showCheckboxes && node.checked ? ' (checked)' : '');
+            return node.name;
         },
 
         updateToggleTransform: function(node) {
