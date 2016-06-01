@@ -43,7 +43,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
         initialize: function(selector, settings) {
             $.extend(this.settings, settings);
             var me = this;
-            this.dispatch = d3.dispatch('updateNodes', 'prepareLoadedNode');
+            this.dispatch = d3.dispatch('updateNodes', 'renderCheckbox', 'prepareLoadedNode');
             this.tree = d3.layout.tree();
             this.svg = d3
                 .select(selector)
@@ -141,7 +141,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
         },
 
         // recursive function to check if at least child is checked
-        
+
 
         renderData: function() {
             var me = this;
@@ -243,17 +243,9 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
             return '#icon-' + node.iconHash;
         },
 
-        updateCheckboxChecked: function(node) {
-            return node.checked ? 'checked' : null;
-        },
-
-        updateCheckboxIndeterminate: function(node) {
-            return node.indeterminate;
-        },
-
         updateSVGElements: function(nodes) {
             var me = this;
-            var textPosition = 10;
+            me.textPosition = 10;
 
             if(me.settings.showIcons) {
                 var icons = this.iconElements
@@ -321,32 +313,20 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
 
             // append the icon element
             if (this.settings.showIcons) {
-                textPosition = 30;
+                me.textPosition = 30;
                 nodeEnter
                     .append('use')
                     .attr('x', 8)
                     .attr('y', -8);
             }
 
-            if (this.settings.showCheckboxes) {
-                textPosition = 45;
-                // @todo Check foreignObject/checkbox support on IE/Edge
-                // @todo Zooming the page containing the svg does not resize/reposition the checkboxes in Safari
-                nodeEnter
-                    .append('foreignObject')
-                    .attr('x', 28)
-                    .attr('y', -8)
-                    .attr('width', 20)
-                    .attr('height', 20)
-                    .append("xhtml:div")
-                    .html('<input class="check" type="checkbox">');
-            }
-
+            // append checkbox
+            this.dispatch.renderCheckbox.call(me, nodeEnter);
 
             // append the text element
             nodeEnter
                 .append('text')
-                .attr('dx', textPosition)
+                .attr('dx', me.textPosition)
                 .attr('dy', 5);
         },
 
@@ -428,6 +408,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
         insertBetween: function(before, after) {
 
         }
+
 
     };
 

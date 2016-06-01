@@ -259,3 +259,7 @@ path.link {
 .icon-status-dialog-warning {
   color: #e8a33d;
 }
+
+.tree-check {
+  cursor: pointer;
+}
