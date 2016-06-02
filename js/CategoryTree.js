@@ -25,10 +25,12 @@ define(['SvgTree'], function(SvgTree) {
 
     CategoryTree.prototype.initialize = function(selector, settings) {
         _super_.initialize.call(this, selector, settings);
+
         this.addIcons();
         this.dispatch.on('updateNodes.category', this.updateNodes);
         this.dispatch.on('prepareLoadedNode.category', this.prepareLoadedNode);
         this.dispatch.on('renderCheckbox.category', this.renderCheckbox);
+        this.dispatch.on('selectedNode.category', this.saveCheckboxes);
     };
 
     CategoryTree.prototype.updateNodes = function (nodes) {
@@ -122,6 +124,22 @@ define(['SvgTree'], function(SvgTree) {
 
     CategoryTree.prototype.updateTextNode = function(node) {
         return _super_.updateTextNode.call(this, node) + (this.settings.showCheckboxes && node.checked ? ' (checked)' : '');
+    };
+
+    CategoryTree.prototype.saveCheckboxes = function() {
+        var selectedNodes = [];
+
+        this.root.filter(function(d) {
+            if (d.checked) {
+                selectedNodes.push(d.identifier)
+            }
+        });
+
+        if (typeof this.settings.inputName !== 'undefined') {
+            d3
+                .select(this.settings.inputName)
+                .property('value', selectedNodes);
+        }
     };
 
     /**

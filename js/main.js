@@ -8,6 +8,7 @@ require(['SvgTree', 'CategoryTree', 'PageTree'], function(SvgTree, CategoryTree,
     treeCategory.initialize('.tree-category', {
         'dataUrl': 'tree-category.json',
         'showCheckboxes': true,
+        'inputName': '.selected-nodes',
         'showIcons': true
     });
 

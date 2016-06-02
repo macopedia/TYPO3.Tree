@@ -261,6 +261,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
                         return 'icon-' + i.identifier;
                     })
                     .html(function (i) {
+                        /* @todo html() method doesn't work with svg elements (IE problem) */
                         return i.icon.replace('<svg', '<g').replace('/svg>', '/g>');
                     });
             }
@@ -424,6 +425,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
                 d.checked = true;
             }
 
+            this.dispatch.selectedNode.call(this);
             this.update();
         },
 
@@ -450,10 +452,6 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
         dblClickOnLabel: function(d) {
             console.log('Double clicked on label of node' + d.identifier + ' ' + d.name);
         }
-
-        /**
-         *
-         */
 
     };
 
