@@ -43,7 +43,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
         initialize: function(selector, settings) {
             $.extend(this.settings, settings);
             var me = this;
-            this.dispatch = d3.dispatch('updateNodes', 'renderCheckbox', 'prepareLoadedNode');
+            this.dispatch = d3.dispatch('updateNodes', 'renderCheckbox', 'prepareLoadedNode', 'selectedNode');
             this.tree = d3.layout.tree();
             this.svg = d3
                 .select(selector)
@@ -161,7 +161,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
             this.data.links = [];
             this.data.icons = [];
             this.data.nodes.forEach(function(n, i) {
-                delete n.children;
+                //delete n.children;
                 n.x = n.depth * me.settings.indentWidth;
                 n.y = i * me.settings.nodeHeight;
                 if (n.parent) {
@@ -317,7 +317,8 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
                 nodeEnter
                     .append('use')
                     .attr('x', 8)
-                    .attr('y', -8);
+                    .attr('y', -8)
+                    .on('click', me.clickOnIcon);
             }
 
             // append checkbox
@@ -327,7 +328,11 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
             nodeEnter
                 .append('text')
                 .attr('dx', me.textPosition)
-                .attr('dy', 5);
+                .attr('dy', 5)
+                .on('click', function(d){
+                    me.clickOnLabel(d);
+                })
+                .on('dblclick', me.dblClickOnLabel);
         },
 
         squaredDiagonal: function(d) {
@@ -405,10 +410,50 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
             this.update();
         },
 
-        insertBetween: function(before, after) {
+        insertBetween: function(before, after) {},
 
+        /**
+         * @name selectNode
+         * @param d
+         */
+
+        selectNode: function (d) {
+            if(d.checked){
+                d.checked = null;
+            } else {
+                d.checked = true;
+            }
+
+            this.update();
+        },
+
+        /**
+         * @name clickOnIcon
+         * @param d
+         */
+        clickOnIcon: function(d) {
+            console.log('Clicked on icon of node' + d.identifier + ' ' + d.name);
+        },
+
+        /**
+         * @name clickOnLabel
+         * @param d
+         */
+        clickOnLabel: function(d) {
+            this.selectNode(d);
+        },
+
+        /**
+         * @name dblClickOnLabel
+         * @param d
+         */
+        dblClickOnLabel: function(d) {
+            console.log('Double clicked on label of node' + d.identifier + ' ' + d.name);
         }
 
+        /**
+         *
+         */
 
     };
 

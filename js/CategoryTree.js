@@ -23,15 +23,26 @@ define(['SvgTree'], function(SvgTree) {
     CategoryTree.prototype = Object.create(SvgTree.prototype);
     var _super_ = SvgTree.prototype;
 
+    CategoryTree.prototype.initialize = function(selector, settings) {
+        _super_.initialize.call(this, selector, settings);
+        this.addIcons();
+        this.dispatch.on('updateNodes.category', this.updateNodes);
+        this.dispatch.on('prepareLoadedNode.category', this.prepareLoadedNode);
+        this.dispatch.on('renderCheckbox.category', this.renderCheckbox);
+    };
+
     CategoryTree.prototype.updateNodes = function (nodes) {
-        var _ = this;
+        var me = this;
         if (this.settings.showCheckboxes) {
-                nodes
-                    .select('.tree-check')
-                    .attr('xlink:href', function (d) {
-                        if (_.updateCheckboxChecked(d)) {
+               nodes
+                   .select('.tree-check')
+                   .property('indeterminate', function(d){
+                       return me.isCheckboxIndeterminate(d);
+                   })
+                   .attr('xlink:href', function (d) {
+                        if (me.updateCheckboxChecked(d)) {
                             return '#icon-checked'
-                        } else if (_.updateCheckboxIndeterminate(d)) {
+                        } else if (me.updateCheckboxIndeterminate(d)) {
                             return '#icon-indeterminate';
                         } else {
                             return '#icon-check'
@@ -40,17 +51,9 @@ define(['SvgTree'], function(SvgTree) {
             }
     };
 
-    CategoryTree.prototype.updateCheckboxChecked = function (node) {
-        return node.checked ? 'true' : null;
-    };
-
-    CategoryTree.prototype.updateCheckboxIndeterminate = function(node) {
-        return node.indeterminate;
-    };
-
     CategoryTree.prototype.renderCheckbox = function (node) {
+        var me = this;
         if (this.settings.showCheckboxes) {
-
             this.textPosition = 50;
 
             node
@@ -58,20 +61,18 @@ define(['SvgTree'], function(SvgTree) {
                 .attr('class','tree-check')
                 .attr('x', 28)
                 .attr('y', -8)
-
-                .on("click", function(d) {
-                    if (d.checked) {
-                        d.checked = null;
-                        d3.select(this).attr('xlink:href', '#icon-check')
-                    } else {
-                        d.checked = true;
-                        d3.select(this).attr('xlink:href', '#icon-checked')
-                    }
-                })
-
-
-
+                .on('click', function(d){
+                    me.selectNode(d);
+                });
         }
+    };
+
+    CategoryTree.prototype.updateCheckboxChecked = function (node) {
+        return node.checked ? 'true' : null;
+    };
+
+    CategoryTree.prototype.updateCheckboxIndeterminate = function(node) {
+        return node.indeterminate;
     };
 
     CategoryTree.prototype.isCheckboxIndeterminate = function(node) {
@@ -85,9 +86,6 @@ define(['SvgTree'], function(SvgTree) {
          */
 
         // indeterminate status already known
-        if (typeof node.indeterminate === 'boolean') {
-            return node.indeterminate;
-        }
 
         // if a node has no children it cannot be indeterminate, if it is checked itself don't hide that by overlaying with indeterminate state
         if (!node.children || node.checked) {
@@ -122,18 +120,13 @@ define(['SvgTree'], function(SvgTree) {
         }
     };
 
-    CategoryTree.prototype.initialize = function(selector, settings) {
-        _super_.initialize.call(this, selector, settings);
-        this.addIcons();
-        this.dispatch.on('updateNodes.category', this.updateNodes);
-        this.dispatch.on('prepareLoadedNode.category', this.prepareLoadedNode);
-        this.dispatch.on('renderCheckbox.category', this.renderCheckbox);
-    };
-
     CategoryTree.prototype.updateTextNode = function(node) {
         return _super_.updateTextNode.call(this, node) + (this.settings.showCheckboxes && node.checked ? ' (checked)' : '');
     };
 
+    /**
+     * Add icons imitating checkboxes
+     */
     CategoryTree.prototype.addIcons = function () {
 
         var iconsData = [
@@ -169,7 +162,5 @@ define(['SvgTree'], function(SvgTree) {
 
     };
 
-
     return CategoryTree;
-}
-);
+});
