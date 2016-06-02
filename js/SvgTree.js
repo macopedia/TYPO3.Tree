@@ -170,7 +170,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
                         target: n
                     });
                 }
-                if (!n.iconHash && me.settings.showIcons) {
+                if (!n.iconHash && me.settings.showIcons && n.icon) {
                     n.iconHash = Math.abs(me.hashCode(n.icon));
                     if (iconHashes.indexOf(n.iconHash) === -1) {
                         iconHashes.push(n.iconHash);
