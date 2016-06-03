@@ -260,9 +260,13 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
                     .attr('id', function (i) {
                         return 'icon-' + i.identifier;
                     })
-                    .html(function (i) {
-                        /* @todo html() method doesn't work with svg elements (IE problem) */
-                        return i.icon.replace('<svg', '<g').replace('/svg>', '/g>');
+                    .append(function (i) {
+                        //workaround for IE11 where you can't simply call .html(content) on svg
+                        var parser = new DOMParser();
+                        var markupText = i.icon.replace('<svg', '<g').replace('/svg>', '/g>');
+                        markupText = "<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>" + markupText + "</svg>";
+                        var dom = parser.parseFromString(markupText, "image/svg+xml");
+                        return dom.documentElement.firstChild;
                     });
             }
             var visibleLinks = this.data.links.filter(function(d) {
