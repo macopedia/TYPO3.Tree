@@ -20,17 +20,13 @@ define(['SvgTree', 'jquery'], function(SvgTree, $) {
      * @class
      */
     var Toolbar = function () {
-        SvgTree.call(this);
-
         this.settings = {
-            $collapseBtn: '.collapse-btn',
-            $uncollapseBtn: '.uncollapse-btn',
+            $collapseAllBtn: '.collapse-all-btn',
+            $expandAllBtn: '.expand-all-btn',
             $searchInput: '.search-input'
         }
 
     };
-
-    Toolbar.prototype = Object.create(SvgTree.prototype);
 
     /**
      * @constructs
@@ -46,31 +42,25 @@ define(['SvgTree', 'jquery'], function(SvgTree, $) {
             this.tree = tree;
         }
 
-        $toolbar.find(this.settings.$collapseBtn).on('click', this.collapse.bind(this));
-        $toolbar.find(this.settings.$uncollapseBtn).on('click', this.uncollapse.bind(this));
+        $toolbar.find(this.settings.$collapseAllBtn).on('click', this.collapseAll.bind(this));
+        $toolbar.find(this.settings.$expandAllBtn).on('click', this.expandAll.bind(this));
         $toolbar.find(this.settings.$searchInput).on('input', function(){
             me.search.call(me, this);
         });
     };
 
     /**
-     * Collapse childrens of root node
+     * Collapse children of root node
      */
-    Toolbar.prototype.collapse = function() {
-        this.tree.hideChildren(this.tree.root[0]);
+    Toolbar.prototype.collapseAll = function() {
+        this.tree.collapseAll();
     };
 
     /**
-     * Uncollapse childrens of root node
+     * Expand all nodes
      */
-    Toolbar.prototype.uncollapse = function() {
-        var me = this;
-
-        this.tree.root.forEach(function(d){
-            if(d.open == false){
-                me.tree.showChildren(d);
-            }
-        });
+    Toolbar.prototype.expandAll = function() {
+        this.tree.expandAll();
     };
 
     /**
@@ -82,16 +72,17 @@ define(['SvgTree', 'jquery'], function(SvgTree, $) {
             name = $(input).val();
 
         this.tree.hideChildren(this.tree.root[0]);
-        this.tree.root.forEach(function(d, i){
-            if(d.name == name){
+        this.tree.root.forEach(function(d, i) {
+            if (d.name == name) {
                 me.showParents(d);
-                me.tree.showChildren(d);
+                d.open = true;
                 d.hidden = false;
-            }else {
+            } else {
                 d.hidden = true;
-                me.tree.hideChildren(d);
+                d.open = false;
             }
         });
+        this.tree.update();
     };
 
     /**
@@ -100,12 +91,13 @@ define(['SvgTree', 'jquery'], function(SvgTree, $) {
      * @returns {boolean}
      */
     Toolbar.prototype.showParents = function(d) {
-        if(!d.parent) {
+        if (!d.parent) {
             return true;
         }
 
         d.parent.hidden = false;
-        this.tree.showChildren(d.parent);
+        //expand parent node
+        d.parent.open = true;
         this.showParents(d.parent);
     };
 

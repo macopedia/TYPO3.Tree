@@ -455,6 +455,22 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
          */
         dblClickOnLabel: function(d) {
             console.log('Double clicked on label of node' + d.identifier + ' ' + d.name);
+        },
+
+        /**
+         * Expand all nodes
+         */
+        expandAll: function() {
+
+            this.root.forEach(function(d) {
+                d.open = true;
+            });
+            this.renderData();
+            this.update();
+        },
+
+        collapseAll: function() {
+            this.hideChildren(this.root[0]);
         }
 
     };
