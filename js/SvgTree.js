@@ -153,7 +153,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
                 }
             });
             this.data.nodes = this.root.filter(function(node) {
-                return !node.parents.some(function(id) {
+                return node.hidden != true && !node.parents.some(function(id) {
                     return Boolean(blacklist[id]);
                 });
             });

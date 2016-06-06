@@ -71,9 +71,9 @@ define(['SvgTree', 'jquery'], function(SvgTree, $) {
         var me = this,
             name = $(input).val();
 
-        this.tree.hideChildren(this.tree.root[0]);
+        this.tree.root[0].open = false;
         this.tree.root.forEach(function(d, i) {
-            if (d.name == name) {
+            if (d.name.indexOf(name) != -1) {
                 me.showParents(d);
                 d.open = true;
                 d.hidden = false;
@@ -82,6 +82,7 @@ define(['SvgTree', 'jquery'], function(SvgTree, $) {
                 d.open = false;
             }
         });
+        this.tree.renderData();
         this.tree.update();
     };
 
