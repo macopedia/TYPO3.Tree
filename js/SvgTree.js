@@ -100,7 +100,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
 
         },
 
-        updateScrollPosition: function(){
+        updateScrollPosition: function() {
             this.viewportHeight = parseInt(window.innerHeight);
             this.scrollTop = Math.max(0, window.pageYOffset - (this.viewportHeight / 2));
             this.scrollHeight = parseInt(window.document.body.clientHeight);
@@ -108,7 +108,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
             this.viewportHeight = this.viewportHeight * 1.5;
         },
 
-        loadData: function(){
+        loadData: function() {
             var me = this;
             d3.json(this.settings.dataUrl, function (error, json) {
                 if (error) throw error;

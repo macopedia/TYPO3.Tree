@@ -36,44 +36,63 @@ define(['SvgTree'], function(SvgTree) {
     CategoryTree.prototype.updateNodes = function (nodes) {
         var me = this;
         if (this.settings.showCheckboxes) {
-               nodes
-                   .select('.tree-check')
-                   .property('indeterminate', function(d){
-                       return me.isCheckboxIndeterminate(d);
-                   })
-                   .attr('xlink:href', function (d) {
-                        if (me.updateCheckboxChecked(d)) {
-                            return '#icon-checked'
-                        } else if (me.updateCheckboxIndeterminate(d)) {
-                            return '#icon-indeterminate';
-                        } else {
-                            return '#icon-check'
-                        }
-                    });
-            }
+            var ns = nodes
+                .selectAll('.tree-check')
+                .property('indeterminate', function(d){
+                   return me.isCheckboxIndeterminate(d);
+                });
+            ns.selectAll('use')
+                .attr('visibility', function (d) {
+                    if ($(this).hasClass('icon-checked') && me.isCheckboxChecked(d)) {
+                        return 'visible';
+                    } else if ($(this).hasClass('icon-indeterminate') && me.getCheckboxIndeterminate(d)) {
+                        return 'visible';
+                    } else if ($(this).hasClass('icon-check') && !me.getCheckboxIndeterminate(d) && !me.isCheckboxChecked(d)) {
+                        return 'visible';
+                    } else {
+                        return 'hidden';
+                    }
+            });
+        }
     };
 
     CategoryTree.prototype.renderCheckbox = function (node) {
         var me = this;
         if (this.settings.showCheckboxes) {
             this.textPosition = 50;
-
-            node
-                .append('use')
+            //this can be simplified to single "use" element with changing href on click when we drop IE11 on WIN7 support
+            var g = node
+                .append('g')
                 .attr('class','tree-check')
-                .attr('x', 28)
-                .attr('y', -8)
                 .on('click', function(d){
                     me.selectNode(d);
                 });
+            g.append('use')
+                .attr('x', 28)
+                .attr('y', -8)
+                .attr('visibility', 'hidden')
+                .attr('class', 'icon-check')
+                .attr('xlink:href', '#icon-check');
+            g.append('use')
+                .attr('x', 28)
+                .attr('y', -8)
+                .attr('visibility', 'hidden')
+                .attr('class', 'icon-checked')
+                .attr('xlink:href', '#icon-checked');
+            g.append('use')
+                .attr('x', 28)
+                .attr('y', -8)
+                .attr('visibility', 'hidden')
+                .attr('class', 'icon-indeterminate')
+                .attr('xlink:href', '#icon-indeterminate');
         }
     };
 
-    CategoryTree.prototype.updateCheckboxChecked = function (node) {
+    CategoryTree.prototype.isCheckboxChecked = function (node) {
         return node.checked ? 'true' : null;
     };
 
-    CategoryTree.prototype.updateCheckboxIndeterminate = function(node) {
+    CategoryTree.prototype.getCheckboxIndeterminate = function(node) {
         return node.indeterminate;
     };
 
