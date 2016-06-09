@@ -43,11 +43,11 @@ define(['SvgTree'], function(SvgTree) {
                 });
             ns.selectAll('use')
                 .attr('visibility', function (d) {
-                    if ($(this).hasClass('icon-checked') && me.isCheckboxChecked(d)) {
+                    if (d3.select(this).classed('icon-checked') && me.isCheckboxChecked(d)) {
                         return 'visible';
-                    } else if ($(this).hasClass('icon-indeterminate') && me.getCheckboxIndeterminate(d)) {
+                    } else if (d3.select(this).classed('icon-indeterminate') && me.getCheckboxIndeterminate(d)) {
                         return 'visible';
-                    } else if ($(this).hasClass('icon-check') && !me.getCheckboxIndeterminate(d) && !me.isCheckboxChecked(d)) {
+                    } else if (d3.select(this).classed('icon-check') && !me.getCheckboxIndeterminate(d) && !me.isCheckboxChecked(d)) {
                         return 'visible';
                     } else {
                         return 'hidden';
