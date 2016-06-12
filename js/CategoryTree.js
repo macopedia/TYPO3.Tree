@@ -45,7 +45,7 @@ define(['SvgTree'], function(SvgTree) {
                 .attr('visibility', function (d) {
                     if (d3.select(this).classed('icon-checked') && me.isCheckboxChecked(d)) {
                         return 'visible';
-                    } else if (d3.select(this).classed('icon-indeterminate') && me.getCheckboxIndeterminate(d)) {
+                    } else if (d3.select(this).classed('icon-indeterminate') && me.getCheckboxIndeterminate(d) && !me.isCheckboxChecked(d)) {
                         return 'visible';
                     } else if (d3.select(this).classed('icon-check') && !me.getCheckboxIndeterminate(d) && !me.isCheckboxChecked(d)) {
                         return 'visible';
