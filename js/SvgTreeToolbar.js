@@ -73,7 +73,8 @@ define(['SvgTree', 'jquery'], function(SvgTree, $) {
 
         this.tree.root[0].open = false;
         this.tree.root.forEach(function(d, i) {
-            if (d.name.indexOf(name) != -1) {
+            var regex = new RegExp(name, 'i');
+            if (regex.test(d.name)) {
                 me.showParents(d);
                 d.open = true;
                 d.hidden = false;
