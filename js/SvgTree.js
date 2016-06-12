@@ -191,7 +191,9 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
             var position = Math.floor(Math.max(this.scrollTop, 0) / this.settings.nodeHeight);
             var visibleNodes = this.data.nodes.slice(position, position + visibleRows);
 
-            var nodes = this.nodeElements.selectAll('.node').data(visibleNodes);
+            var nodes = this.nodeElements.selectAll('.node').data(visibleNodes, function (d) {
+                return d.identifier;
+            });
 
             if (this.visibleRows !== visibleRows || this.position !== position || this.visibleNodesCount !== visibleNodes.length) {
                 this.visibleRows = visibleRows;
