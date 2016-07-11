@@ -83,7 +83,7 @@ define(['SvgTree', 'jquery'], function(SvgTree, $) {
                 d.open = false;
             }
         });
-        this.tree.renderData();
+        this.tree.prepareDataForVisibleNodes();
         this.tree.update();
     };
 

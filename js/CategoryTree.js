@@ -29,7 +29,7 @@ define(['SvgTree'], function(SvgTree) {
         this.addIcons();
         this.dispatch.on('updateNodes.category', this.updateNodes);
         this.dispatch.on('prepareLoadedNode.category', this.prepareLoadedNode);
-        this.dispatch.on('renderCheckbox.category', this.renderCheckbox);
+        this.dispatch.on('updateSvg.category', this.renderCheckbox);
         this.dispatch.on('selectedNode.category', this.saveCheckboxes);
     };
 
@@ -146,18 +146,12 @@ define(['SvgTree'], function(SvgTree) {
     };
 
     CategoryTree.prototype.saveCheckboxes = function() {
-        var selectedNodes = [];
-
-        this.root.filter(function(d) {
-            if (d.checked) {
-                selectedNodes.push(d.identifier)
-            }
-        });
+        var selectedNodes = this.getSelectedNodes();
 
         if (typeof this.settings.inputName !== 'undefined') {
             d3
                 .select(this.settings.inputName)
-                .property('value', selectedNodes);
+                .property('value', selectedNodes.map(function(d) {return d.identifier}));
         }
     };
 

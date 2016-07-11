@@ -43,7 +43,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
         initialize: function(selector, settings) {
             $.extend(this.settings, settings);
             var me = this;
-            this.dispatch = d3.dispatch('updateNodes', 'renderCheckbox', 'prepareLoadedNode', 'selectedNode');
+            this.dispatch = d3.dispatch('updateNodes', 'updateSvg', 'prepareLoadedNode', 'selectedNode');
             this.tree = d3.layout.tree();
             this.svg = d3
                 .select(selector)
@@ -135,7 +135,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
                     me.dispatch.prepareLoadedNode.call(me, n);
                 });
                 me.root = json;
-                me.renderData();
+                me.prepareDataForVisibleNodes();
                 me.update();
             });
         },
@@ -328,8 +328,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
                     .on('click', me.clickOnIcon);
             }
 
-            // append checkbox
-            this.dispatch.renderCheckbox.call(me, nodeEnter);
+            this.dispatch.updateSvg.call(me, nodeEnter);
 
             // append the text element
             nodeEnter
@@ -407,13 +406,13 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
 
         hideChildren: function(d) {
             d.open = false;
-            this.renderData();
+            this.prepareDataForVisibleNodes();
             this.update();
         },
 
         showChildren: function(d) {
             d.open = true;
-            this.renderData();
+            this.prepareDataForVisibleNodes();
             this.update();
         },
 
@@ -425,7 +424,15 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
          */
 
         selectNode: function (d) {
-            if(d.checked){
+            var checked = d.checked;
+            if (this.settings.validationRules && this.settings.validationRules.maxItems == 1) {
+                var selectedNodes = this.getSelectedNodes();
+                selectedNodes.forEach(function (item, index) {
+                    item.checked = null;
+                });
+            }
+
+            if (checked) {
                 d.checked = null;
             } else {
                 d.checked = true;
@@ -435,6 +442,16 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
             this.update();
         },
 
+        getSelectedNodes: function () {
+            var selectedNodes = [];
+
+            this.root.filter(function (d) {
+                if (d.checked) {
+                    selectedNodes.push(d)
+                }
+            });
+            return selectedNodes;
+        },
         /**
          * @name clickOnIcon
          * @param d
@@ -467,7 +484,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
             this.root.forEach(function(d) {
                 d.open = true;
             });
-            this.renderData();
+            this.prepareDataForVisibleNodes();
             this.update();
         },
 
