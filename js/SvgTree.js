@@ -1,11 +1,8 @@
-
-
-define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _) {
+define(['jquery', 'd3'], function ($, d3) {
     'use strict';
 
 
-
-    var SvgTree = function(){
+    var SvgTree = function () {
         this.settings = {
             showCheckboxes: false,
             showIcons: false,
@@ -22,14 +19,10 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
         this.tree = null;
         this.svg = null;
         this.iconElements = null;
-        this.dragElement = null;
         this.container = null;
         this.linkElements = null;
         this.nodeElements = null;
-        this.drag = null;
         this.root = null;
-        this.lastDragY = null;
-        this.throttledDragmove = null;
         this.data = {};
         this.visibleRows = 0;
         this.position = 0;
@@ -40,7 +33,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
     SvgTree.prototype = {
         constructor: SvgTree,
 
-        initialize: function(selector, settings) {
+        initialize: function (selector, settings) {
             $.extend(this.settings, settings);
             var me = this;
             this.dispatch = d3.dispatch('updateNodes', 'updateSvg', 'prepareLoadedNode', 'selectedNode');
@@ -49,14 +42,6 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
                 .select(selector)
                 .append('svg')
                 .attr('version', '1.1');
-            this.dragElement = this.svg
-                .append('rect')
-                .attr('visibility', 'hidden')
-                .attr('x', 0)
-                .attr('y', 0)
-                .style('fill', '#D6E7F7')
-                .attr('width', '100%')
-                .attr('height', this.settings.nodeHeight);
             this.container = this.svg
                 .append('g')
                 .attr('transform', 'translate(' + (this.settings.indentWidth / 2) + ',' + (this.settings.nodeHeight / 2) + ')');
@@ -64,12 +49,6 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
                 .attr('class', 'links');
             this.nodeElements = this.container.append('g')
                 .attr('class', 'nodes');
-            this.drag = d3.behavior.drag()
-                .origin(Object)
-                .on('dragstart', this.dragstart.bind(me))
-                .on('drag', this.dragmove.bind(me))
-                .on('dragend', this.dragend.bind(me));
-
             if (this.settings.showIcons) {
                 this.iconElements = this.svg.append('defs');
             }
@@ -82,25 +61,9 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
                 me.updateScrollPosition();
                 me.update();
             });
-
-            document.addEventListener('DOMContentLoaded', function () {
-                FastClick.attach(document.querySelector(selector));
-            }, false);
-
-            this.throttledDragmove = _.throttle(function () {
-                var currentRow = (Math.round(( me.lastDragY / me.settings.nodeHeight ) * 2) / 2);
-                var dragElementHeight = currentRow % 1 ? 1 : me.settings.nodeHeight;
-                var dragElementY = (currentRow * me.settings.nodeHeight) + (currentRow % 1 ? (me.settings.nodeHeight / 2) : 0);
-                me.dragElement
-                    .attr('visibility', 'visible')
-                    .attr('transform', this.xy({x: 0, y: dragElementY}))
-                    .attr('height', dragElementHeight);
-            }, 40);
-
-
         },
 
-        updateScrollPosition: function() {
+        updateScrollPosition: function () {
             this.viewportHeight = parseInt(window.innerHeight);
             this.scrollTop = Math.max(0, window.pageYOffset - (this.viewportHeight / 2));
             this.scrollHeight = parseInt(window.document.body.clientHeight);
@@ -108,7 +71,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
             this.viewportHeight = this.viewportHeight * 1.5;
         },
 
-        loadData: function() {
+        loadData: function () {
             var me = this;
             d3.json(this.settings.dataUrl, function (error, json) {
                 if (error) throw error;
@@ -117,7 +80,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
                     json = json[0];
                 }
                 json = me.tree.nodes(json);
-                json.forEach(function(n) {
+                json.forEach(function (n) {
                     n.open = true;
                     n.hasChildren = (n.children || n._children) ? 1 : 0;
                     n.parents = [];
@@ -143,24 +106,24 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
         // recursive function to check if at least child is checked
 
 
-        renderData: function() {
+        prepareDataForVisibleNodes: function () {
             var me = this;
 
             var blacklist = {};
-            this.root.forEach(function(node) {
+            this.root.forEach(function (node) {
                 if (!node.open) {
                     blacklist[node.identifier] = true;
                 }
             });
-            this.data.nodes = this.root.filter(function(node) {
-                return node.hidden != true && !node.parents.some(function(id) {
-                    return Boolean(blacklist[id]);
-                });
+            this.data.nodes = this.root.filter(function (node) {
+                return node.hidden != true && !node.parents.some(function (id) {
+                        return Boolean(blacklist[id]);
+                    });
             });
             var iconHashes = [];
             this.data.links = [];
             this.data.icons = [];
-            this.data.nodes.forEach(function(n, i) {
+            this.data.nodes.forEach(function (n, i) {
                 //delete n.children;
                 n.x = n.depth * me.settings.indentWidth;
                 n.y = i * me.settings.nodeHeight;
@@ -185,7 +148,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
             this.svg.attr('height', this.data.nodes.length * this.settings.nodeHeight);
         },
 
-        update: function() {
+        update: function () {
             var me = this;
             var visibleRows = Math.ceil(this.viewportHeight / this.settings.nodeHeight + 1);
             var position = Math.floor(Math.max(this.scrollTop, 0) / this.settings.nodeHeight);
@@ -195,12 +158,12 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
                 return d.identifier;
             });
 
-            if (this.visibleRows !== visibleRows || this.position !== position || this.visibleNodesCount !== visibleNodes.length) {
-                this.visibleRows = visibleRows;
-                this.position = position;
-                this.visibleNodesCount = visibleNodes.length;
-                this.updateSVGElements(nodes);
-            }
+            // if (this.visibleRows !== visibleRows || this.position !== position || this.visibleNodesCount !== visibleNodes.length) {
+            this.visibleRows = visibleRows;
+            this.position = position;
+            this.visibleNodesCount = visibleNodes.length;
+            this.updateSVGElements(nodes);
+            // }
 
             // update
             nodes
@@ -229,27 +192,27 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
 
         },
 
-        updateTextNode: function(node) {
+        updateTextNode: function (node) {
             return node.name;
         },
 
-        updateToggleTransform: function(node) {
-            return node.open ? 'translate(8 -8) rotate(90)' : 'translate(-8 -8) rotate(0)' ;
+        updateToggleTransform: function (node) {
+            return node.open ? 'translate(8 -8) rotate(90)' : 'translate(-8 -8) rotate(0)';
         },
 
-        updateToggleVisibility: function(node) {
+        updateToggleVisibility: function (node) {
             return node.hasChildren ? 'visible' : 'hidden';
         },
 
-        updateIconId: function(node) {
+        updateIconId: function (node) {
             return '#icon-' + node.iconHash;
         },
 
-        updateSVGElements: function(nodes) {
+        updateSVGElements: function (nodes) {
             var me = this;
             me.textPosition = 10;
 
-            if(me.settings.showIcons) {
+            if (me.settings.showIcons) {
                 var icons = this.iconElements
                     .selectAll('.icon-def')
                     .data(this.data.icons, function (i) {
@@ -271,7 +234,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
                         return dom.documentElement.firstChild;
                     });
             }
-            var visibleLinks = this.data.links.filter(function(d) {
+            var visibleLinks = this.data.links.filter(function (d) {
                 return d.source.y <= me.scrollBottom && me.scrollTop <= d.target.y;
             });
 
@@ -299,8 +262,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
                 .enter()
                 .append('g')
                 .attr('class', 'node')
-                .attr('transform', this.xy)
-                .call(this.drag);
+                .attr('transform', this.xy);
 
             // append the chevron element
             var chevron = nodeEnter
@@ -335,13 +297,13 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
                 .append('text')
                 .attr('dx', me.textPosition)
                 .attr('dy', 5)
-                .on('click', function(d){
+                .on('click', function (d) {
                     me.clickOnLabel(d);
                 })
                 .on('dblclick', me.dblClickOnLabel);
         },
 
-        squaredDiagonal: function(d) {
+        squaredDiagonal: function (d) {
             var me = this;
 
             var target = {
@@ -359,19 +321,19 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
             return path.join(' ');
         },
 
-        xy: function(d) {
+        xy: function (d) {
             return 'translate(' + d.x + ',' + d.y + ')';
         },
 
-        hashCode: function(s) {
+        hashCode: function (s) {
             return s.split('')
-                .reduce(function(a,b) {
-                    a = ((a<<5)-a) + b.charCodeAt(0);
-                    return a&a
+                .reduce(function (a, b) {
+                    a = ((a << 5) - a) + b.charCodeAt(0);
+                    return a & a
                 }, 0);
         },
 
-        chevronClick: function(d) {
+        chevronClick: function (d) {
             if (d.open) {
                 this.hideChildren(d);
             } else {
@@ -380,49 +342,26 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
             this.update();
         },
 
-        dragstart: function(d) {
-            d._isDragged = true;
-        },
 
-        dragmove: function(d) {
-            this.lastDragY = d3.event.y;
-            this.throttledDragmove(d);
-        },
-
-        dragend: function(d) {
-            d._isDragged = false;
-            this.dragElement
-                .attr('visibility', 'hidden');
-            // var currentRow = (Math.round(( lastDragY / nodeHeight ) * 2) / 2);
-            // var elementBeforePosition = Math.floor(currentRow);
-            // var elementBefore = root[elementBeforePosition];
-            // var elementAfter = root[elementBeforePosition + 1];
-            // if (currentRow % 1) {
-            //     insertBetween(elementBefore, elementAfter);
-            // } else {
-            //
-            // }
-        },
-
-        hideChildren: function(d) {
+        hideChildren: function (d) {
             d.open = false;
             this.prepareDataForVisibleNodes();
             this.update();
         },
 
-        showChildren: function(d) {
+        showChildren: function (d) {
             d.open = true;
             this.prepareDataForVisibleNodes();
             this.update();
         },
 
-        insertBetween: function(before, after) {},
+        insertBetween: function (before, after) {
+        },
 
         /**
          * @name selectNode
          * @param d
          */
-
         selectNode: function (d) {
             var checked = d.checked;
             if (this.settings.validationRules && this.settings.validationRules.maxItems == 1) {
@@ -452,11 +391,12 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
             });
             return selectedNodes;
         },
+
         /**
          * @name clickOnIcon
          * @param d
          */
-        clickOnIcon: function(d) {
+        clickOnIcon: function (d) {
             console.log('Clicked on icon of node' + d.identifier + ' ' + d.name);
         },
 
@@ -464,7 +404,7 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
          * @name clickOnLabel
          * @param d
          */
-        clickOnLabel: function(d) {
+        clickOnLabel: function (d) {
             this.selectNode(d);
         },
 
@@ -472,23 +412,23 @@ define(['jquery', 'd3', 'FastClick', 'underscore'], function($, d3, FastClick, _
          * @name dblClickOnLabel
          * @param d
          */
-        dblClickOnLabel: function(d) {
+        dblClickOnLabel: function (d) {
             console.log('Double clicked on label of node' + d.identifier + ' ' + d.name);
         },
 
         /**
          * Expand all nodes
          */
-        expandAll: function() {
+        expandAll: function () {
 
-            this.root.forEach(function(d) {
+            this.root.forEach(function (d) {
                 d.open = true;
             });
             this.prepareDataForVisibleNodes();
             this.update();
         },
 
-        collapseAll: function() {
+        collapseAll: function () {
             this.hideChildren(this.root[0]);
         }
 
