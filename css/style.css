@@ -227,3 +227,15 @@ path.link {
 input[type="text"] {
  display: inline-block;
 }
+
+
+/**
+backend styles
+*/
+
+.icon-collapse-all {
+	background-image: url("../t3-icons/collapse-all.gif");
+}
+.icon-expand-all {
+	background-image: url("../t3-icons/expand-all.gif");
+}
