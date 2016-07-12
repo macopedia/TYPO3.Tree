@@ -12,7 +12,7 @@
  */
 
 
-define(['SvgTree', 'FastClick', 'underscore'], function (SvgTree, FastClick, _) {
+define(['SvgTree', 'FastClick', 'underscore', 'd3'], function (SvgTree, FastClick, _, d3) {
         'use strict';
 
         var PageTree = function () {
@@ -36,11 +36,10 @@ define(['SvgTree', 'FastClick', 'underscore'], function (SvgTree, FastClick, _) 
                 .attr('width', '100%')
                 .attr('height', this.settings.nodeHeight);
 
-            this.drag = d3.behavior.drag()
-                .origin(Object)
-                .on('dragstart', this.dragstart.bind(me))
+            this.drag = d3.drag()
+                .on('.dragstart', this.dragstart.bind(me))
                 .on('drag', this.dragmove.bind(me))
-                .on('dragend', this.dragend.bind(me));
+                .on('.dragend', this.dragend.bind(me));
             document.addEventListener('DOMContentLoaded', function () {
                 FastClick.attach(document.querySelector(selector));
             }, false);

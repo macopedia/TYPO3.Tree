@@ -1,4 +1,4 @@
-define(['jquery', 'd3'], function ($, d3) {
+define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'], function ($, d3, d3hierarchy, d3drag, d3dispatch, d3selection) {
     'use strict';
 
 
@@ -39,7 +39,7 @@ define(['jquery', 'd3'], function ($, d3) {
             var me = this;
             this.selector = selector;
             this.dispatch = d3.dispatch('updateNodes', 'updateSvg', 'prepareLoadedNode', 'selectedNode');
-            this.tree = d3.layout.tree();
+            this.tree = d3.tree();
             this.svg = d3
                 .select(selector)
                 .append('svg')
@@ -86,8 +86,11 @@ define(['jquery', 'd3'], function ($, d3) {
                     //little hack, so we can use json structure prepared by ExtJsJsonTreeRenderer
                     json = json[0];
                 }
-                json = me.tree.nodes(json);
-                json.forEach(function (n) {
+
+                var root = d3.hierarchy(json);
+                me.tree = me.tree(root);
+
+                root.each(function (n) {
                     n.open = true;
                     n.hasChildren = (n.children || n._children) ? 1 : 0;
                     n.parents = [];
@@ -102,9 +105,11 @@ define(['jquery', 'd3'], function ($, d3) {
                         }
                     }
                     //dispatch event
-                    me.dispatch.prepareLoadedNode.call(me, n);
+                    me.dispatch.call("prepareLoadedNode", me, n);
                 });
-                me.root = json;
+
+
+                me.root = root;
                 me.prepareDataForVisibleNodes();
                 me.update();
             });
@@ -117,16 +122,20 @@ define(['jquery', 'd3'], function ($, d3) {
             var me = this;
 
             var blacklist = {};
-            this.root.forEach(function (node) {
+            this.root.each(function (node) {
                 if (!node.open) {
                     blacklist[node.identifier] = true;
                 }
+
             });
-            this.data.nodes = this.root.filter(function (node) {
+
+
+            this.data.nodes = this.root.descendants().filter(function (node) {
                 return node.hidden != true && !node.parents.some(function (id) {
                         return Boolean(blacklist[id]);
                     });
             });
+
             var iconHashes = [];
             this.data.links = [];
             this.data.icons = [];
@@ -159,10 +168,10 @@ define(['jquery', 'd3'], function ($, d3) {
             var me = this;
             var visibleRows = Math.ceil(this.viewportHeight / this.settings.nodeHeight + 1);
             var position = Math.floor(Math.max(this.scrollTop, 0) / this.settings.nodeHeight);
-            var visibleNodes = this.data.nodes.slice(position, position + visibleRows);
-
+            //var visibleNodes = this.data.nodes.slice(position, position + visibleRows);
+            var visibleNodes = this.data.nodes;
             var nodes = this.nodeElements.selectAll('.node').data(visibleNodes, function (d) {
-                return d.identifier;
+                return d.data.identifier;
             });
 
             // if (this.visibleRows !== visibleRows || this.position !== position || this.visibleNodesCount !== visibleNodes.length) {
@@ -189,7 +198,7 @@ define(['jquery', 'd3'], function ($, d3) {
             }
 
             //dispatch event
-            this.dispatch.updateNodes.call(this, nodes);
+            this.dispatch.call("updateNodes", me, nodes);
 
             // delete
             nodes
@@ -200,7 +209,7 @@ define(['jquery', 'd3'], function ($, d3) {
         },
 
         updateTextNode: function (node) {
-            return node.name;
+            return node.data.name;
         },
 
         updateToggleTransform: function (node) {
@@ -297,7 +306,7 @@ define(['jquery', 'd3'], function ($, d3) {
                     .on('click', me.clickOnIcon);
             }
 
-            this.dispatch.updateSvg.call(me, nodeEnter);
+            this.dispatch.call("updateSvg", me, nodeEnter);
 
             // append the text element
             nodeEnter
@@ -384,7 +393,7 @@ define(['jquery', 'd3'], function ($, d3) {
                 d.checked = true;
             }
 
-            this.dispatch.selectedNode.call(this);
+            this.dispatch.call("selectedNode", this);
             this.update();
         },
 
@@ -404,7 +413,7 @@ define(['jquery', 'd3'], function ($, d3) {
          * @param d
          */
         clickOnIcon: function (d) {
-            console.log('Clicked on icon of node' + d.identifier + ' ' + d.name);
+            console.log('Clicked on icon of node' + d.data.identifier + ' ' + d.name);
         },
 
         /**
@@ -420,7 +429,7 @@ define(['jquery', 'd3'], function ($, d3) {
          * @param d
          */
         dblClickOnLabel: function (d) {
-            console.log('Double clicked on label of node' + d.identifier + ' ' + d.name);
+            console.log('Double clicked on label of node' + d.data.identifier + ' ' + d.name);
         },
 
         /**
