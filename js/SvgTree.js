@@ -28,6 +28,7 @@ define(['jquery', 'd3'], function ($, d3) {
         this.position = 0;
         this.visibleNodesCount = 0;
         this.dispatch = null;
+        this.selector = null;
     };
 
     SvgTree.prototype = {
@@ -36,6 +37,7 @@ define(['jquery', 'd3'], function ($, d3) {
         initialize: function (selector, settings) {
             $.extend(this.settings, settings);
             var me = this;
+            this.selector = selector;
             this.dispatch = d3.dispatch('updateNodes', 'updateSvg', 'prepareLoadedNode', 'selectedNode');
             this.tree = d3.layout.tree();
             this.svg = d3
@@ -64,8 +66,13 @@ define(['jquery', 'd3'], function ($, d3) {
         },
 
         updateScrollPosition: function () {
+
+            var bodyRect = document.body.getBoundingClientRect(),
+                elemRect = document.querySelector(this.selector).getBoundingClientRect(),
+                offset   = elemRect.top - bodyRect.top;
+
             this.viewportHeight = parseInt(window.innerHeight);
-            this.scrollTop = Math.max(0, window.pageYOffset - (this.viewportHeight / 2));
+            this.scrollTop = Math.max(0, (window.pageYOffset - offset) - (this.viewportHeight / 2));
             this.scrollHeight = parseInt(window.document.body.clientHeight);
             this.scrollBottom = this.scrollTop + this.viewportHeight + (this.viewportHeight / 2);
             this.viewportHeight = this.viewportHeight * 1.5;
