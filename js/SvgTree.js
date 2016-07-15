@@ -15,7 +15,11 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
             nodeHeight: 20,
             indentWidth: 16,
             duration: 400,
-            dataUrl: 'tree-configuration.json'
+            dataUrl: 'tree-configuration.json',
+            validation: {
+                maxItems: 0
+            },
+            unselectableElements: []
         };
 
         this.viewportHeight = 0;
@@ -178,7 +182,7 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
                 return d.data.identifier;
             });
 
-            // delete nodes without coresponding data
+            // delete nodes without corresponding data
             nodes
                 .exit()
                 .remove();
@@ -210,8 +214,8 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
         },
         updateLinks: function (nodes) {
             var me = this;
-            var visibleLinks = this.data.links.filter(function (d) {
-                return d.source.y <= me.scrollBottom && me.scrollTop <= d.target.y;
+            var visibleLinks = this.data.links.filter(function (linkData) {
+                return linkData.source.y <= me.scrollBottom && me.scrollTop <= linkData.target.y;
             });
 
             var links = this.linkElements
@@ -299,8 +303,8 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
                 .append('text')
                 .attr('dx', me.textPosition)
                 .attr('dy', 5)
-                .on('click', function (d) {
-                    me.clickOnLabel(d);
+                .on('click', function (node) {
+                    me.clickOnLabel(node);
                 })
                 .on('dblclick', me.dblClickOnLabel);
 
@@ -323,15 +327,15 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
             return '#icon-' + node.iconHash;
         },
 
-        squaredDiagonal: function (d) {
+        squaredDiagonal: function (link) {
             var me = this;
 
             var target = {
-                x: d.target._isDragged ? d.target._x : d.target.x,
-                y: d.target._isDragged ? d.target._y : d.target.y
+                x: link.target._isDragged ? link.target._x : link.target.x,
+                y: link.target._isDragged ? link.target._y : link.target.y
             };
             var path = [];
-            path.push('M' + d.source.x + ' ' + d.source.y);
+            path.push('M' + link.source.x + ' ' + link.source.y);
             path.push('V' + target.y);
             if (target.hasChildren) {
                 path.push('H' + target.x);
@@ -341,8 +345,11 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
             return path.join(' ');
         },
 
-        xy: function (d) {
-            return 'translate(' + d.x + ',' + d.y + ')';
+        /**
+         * @param {Node} node
+         */
+        xy: function (node) {
+            return 'translate(' + node.x + ',' + node.y + ')';
         },
 
         hashCode: function (s) {
@@ -353,24 +360,32 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
                 }, 0);
         },
 
-        chevronClick: function (d) {
-            if (d.open) {
-                this.hideChildren(d);
+        /**
+         * @param {Node} node
+         */
+        chevronClick: function (node) {
+            if (node.open) {
+                this.hideChildren(node);
             } else {
-                this.showChildren(d);
+                this.showChildren(node);
             }
             this.update();
         },
 
-
-        hideChildren: function (d) {
-            d.open = false;
+        /**
+         * @param {Node} node
+         */
+        hideChildren: function (node) {
+            node.open = false;
             this.prepareDataForVisibleNodes();
             this.update();
         },
 
-        showChildren: function (d) {
-            d.open = true;
+        /**
+         * @param {Node} node
+         */
+        showChildren: function (node) {
+            node.open = true;
             this.prepareDataForVisibleNodes();
             this.update();
         },
@@ -379,34 +394,47 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
         },
 
         /**
-         * @name selectNode
-         * @param d
+         * @param {Node} node
          */
-        selectNode: function (d) {
-            var checked = d.data.checked;
-            if (this.settings.validationRules && this.settings.validationRules.maxItems == 1) {
+        selectNode: function (node) {
+            if (!this.isNodeSelectable(node)) {
+                return;
+            }
+            var checked = node.data.checked;
+            if (this.settings.validation && this.settings.validation.maxItems > 0) {
                 var selectedNodes = this.getSelectedNodes();
-                selectedNodes.forEach(function (item, index) {
-                    item.data.checked = null;
-                });
+                if (!checked && selectedNodes.length >= this.settings.validation.maxItems) {
+                    return;
+                }
             }
 
             if (checked) {
-                d.data.checked = null;
+                node.data.checked = null;
             } else {
-                d.data.checked = true;
+                node.data.checked = true;
             }
 
             this.dispatch.call("selectedNode", this);
             this.update();
         },
 
+        /**
+         * Check whether node can be selected, in some cases like parent selector it should not be possible to select
+         * element as it's own parent
+         *
+         * @param {Node} node
+         * @returns {boolean}
+         */
+        isNodeSelectable: function (node) {
+            return this.settings.unselectableElements.indexOf(node.identifier) == -1;
+        },
+
         getSelectedNodes: function () {
             var selectedNodes = [];
 
-            this.rootNode.each(function (d) {
-                if (d.data.checked) {
-                    selectedNodes.push(d)
+            this.rootNode.each(function (node) {
+                if (node.data.checked) {
+                    selectedNodes.push(node)
                 }
             });
             return selectedNodes;
@@ -414,26 +442,26 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
 
         /**
          * @name clickOnIcon
-         * @param d
+         * @param {Node} node
          */
-        clickOnIcon: function (d) {
-            console.log('Clicked on icon of node' + d.data.identifier + ' ' + d.data.name);
+        clickOnIcon: function (node) {
+            console.log('Clicked on icon of node' + node.data.identifier + ' ' + node.data.name);
         },
 
         /**
          * @name clickOnLabel
-         * @param d
+         * @param {Node} node
          */
-        clickOnLabel: function (d) {
-            this.selectNode(d);
+        clickOnLabel: function (node) {
+            this.selectNode(node);
         },
 
         /**
          * @name dblClickOnLabel
-         * @param d
+         * @param {Node} node
          */
-        dblClickOnLabel: function (d) {
-            console.log('Double clicked on label of node' + d.data.identifier + ' ' + d.data.name);
+        dblClickOnLabel: function (node) {
+            console.log('Double clicked on label of node' + node.data.identifier + ' ' + node.data.name);
         },
 
         /**
@@ -441,8 +469,8 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
          */
         expandAll: function () {
 
-            this.rootNode.each(function (d) {
-                d.open = true;
+            this.rootNode.each(function (node) {
+                node.open = true;
             });
             this.prepareDataForVisibleNodes();
             this.update();
