@@ -98,7 +98,7 @@ define(['d3', 'SvgTree'], function(d3, SvgTree) {
      * @param {Node} node
      */
     CategoryTree.prototype.isCheckboxChecked = function (node) {
-        return node.data.checked ? 'true' : null;
+        return Boolean(node.data.checked);
     };
 
     /**

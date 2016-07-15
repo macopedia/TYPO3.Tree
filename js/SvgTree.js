@@ -17,9 +17,10 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
             duration: 400,
             dataUrl: 'tree-configuration.json',
             validation: {
-                maxItems: 0
+                maxItems: Number.MAX_VALUE
             },
-            unselectableElements: []
+            unselectableElements: [],
+            expandUpToLevel: Number.MAX_VALUE
         };
 
         this.viewportHeight = 0;
@@ -54,7 +55,8 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
             this.svg = d3
                 .select(selector)
                 .append('svg')
-                .attr('version', '1.1');
+                .attr('version', '1.1')
+                .attr('width', '100%');
             this.container = this.svg
                 .append('g')
                 .attr('transform', 'translate(' + (this.settings.indentWidth / 2) + ',' + (this.settings.nodeHeight / 2) + ')');
@@ -102,7 +104,7 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
                 d3.tree(rootNode);
 
                 rootNode.each(function (n) {
-                    n.open = true;
+                    n.open = n.depth < me.settings.expandUpToLevel;
                     n.hasChildren = (n.children || n._children) ? 1 : 0;
                     n.parents = [];
                     n._isDragged = false;
@@ -115,6 +117,10 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
                             x = x.parent;
                         }
                     }
+                    if (typeof n.data.checked == 'undefined') {
+                        n.data.checked = false;
+                        me.settings.unselectableElements.push(n.data.identifier);
+                    }
                     //dispatch event
                     me.dispatch.call("prepareLoadedNode", me, n);
                 });
@@ -124,9 +130,6 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
                 me.update();
             });
         },
-
-        // recursive function to check if at least child is checked
-
 
         prepareDataForVisibleNodes: function () {
             var me = this;
@@ -401,18 +404,14 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
                 return;
             }
             var checked = node.data.checked;
-            if (this.settings.validation && this.settings.validation.maxItems > 0) {
+            if (this.settings.validation && this.settings.validation.maxItems) {
                 var selectedNodes = this.getSelectedNodes();
                 if (!checked && selectedNodes.length >= this.settings.validation.maxItems) {
                     return;
                 }
             }
 
-            if (checked) {
-                node.data.checked = null;
-            } else {
-                node.data.checked = true;
-            }
+            node.data.checked = !checked;
 
             this.dispatch.call("selectedNode", this);
             this.update();
@@ -426,7 +425,7 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
          * @returns {boolean}
          */
         isNodeSelectable: function (node) {
-            return this.settings.unselectableElements.indexOf(node.identifier) == -1;
+            return this.settings.unselectableElements.indexOf(node.data.identifier) == -1;
         },
 
         getSelectedNodes: function () {
