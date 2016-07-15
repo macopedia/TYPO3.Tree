@@ -1,6 +1,7 @@
 # SVGTree
 
 This is a demo for a SVGTree.
+It is based on the D3.js v4
 
 Clone repository:
 
@@ -9,3 +10,7 @@ Clone repository:
 Install bower components:
 
 `bower install`
+
+Install npm modules
+
+`npm install`
