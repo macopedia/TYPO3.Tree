@@ -12,7 +12,7 @@
  */
 
 
-define(['SvgTree'], function(SvgTree) {
+define(['d3', 'SvgTree'], function(d3, SvgTree) {
     'use strict';
 
     var CategoryTree = function() {
@@ -89,7 +89,7 @@ define(['SvgTree'], function(SvgTree) {
     };
 
     CategoryTree.prototype.isCheckboxChecked = function (node) {
-        return node.checked ? 'true' : null;
+        return node.data.checked ? 'true' : null;
     };
 
     CategoryTree.prototype.getCheckboxIndeterminate = function(node) {
@@ -109,7 +109,7 @@ define(['SvgTree'], function(SvgTree) {
         // indeterminate status already known
 
         // if a node has no children it cannot be indeterminate, if it is checked itself don't hide that by overlaying with indeterminate state
-        if (!node.children || node.checked) {
+        if (!node.children || node.data.checked) {
             return false;
         }
 
@@ -120,14 +120,14 @@ define(['SvgTree'], function(SvgTree) {
         var me = this;
 
         if (!n.children) {
-            return n.checked;
+            return n.data.checked;
         }
 
         var hasCheckedChildren = false;
         n.children.some(function (child) {
             hasCheckedChildren = me.hasCheckedChildren(child);
             // save child's indeterminate status to speed up detection
-            child.indeterminate = (!child.children || child.checked) ? false : hasCheckedChildren;
+            child.indeterminate = (!child.children || child.data.checked) ? false : hasCheckedChildren;
 
             // return in some() skips rest if true
             return hasCheckedChildren;
@@ -142,7 +142,7 @@ define(['SvgTree'], function(SvgTree) {
     };
 
     CategoryTree.prototype.updateTextNode = function(node) {
-        return _super_.updateTextNode.call(this, node) + (this.settings.showCheckboxes && node.checked ? ' (checked)' : '');
+        return _super_.updateTextNode.call(this, node) + (this.settings.showCheckboxes && node.data.checked ? ' (checked)' : '');
     };
 
     CategoryTree.prototype.saveCheckboxes = function() {
@@ -151,7 +151,7 @@ define(['SvgTree'], function(SvgTree) {
         if (typeof this.settings.inputName !== 'undefined') {
             d3
                 .select(this.settings.inputName)
-                .property('value', selectedNodes.map(function(d) {return d.identifier}));
+                .property('value', selectedNodes.map(function(d) {return d.data.identifier}));
         }
     };
 

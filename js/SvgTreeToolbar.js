@@ -30,13 +30,13 @@ define(['SvgTree', 'jquery'], function(SvgTree, $) {
 
     /**
      * @constructs
-     * @param toolbar
-     * @param tree
+     * @param {string} selector
+     * @param {SvgTree} tree
      * @param settings
      */
-    Toolbar.prototype.initialize = function(toolbar, tree, settings) {
+    Toolbar.prototype.initialize = function(selector, tree, settings) {
         var me = this,
-            $toolbar = $(toolbar);
+            $toolbar = $(selector);
 
         if (typeof tree !== 'undefined') {
             this.tree = tree;
@@ -71,10 +71,10 @@ define(['SvgTree', 'jquery'], function(SvgTree, $) {
         var me = this,
             name = $(input).val();
 
-        this.tree.root[0].open = false;
-        this.tree.root.forEach(function(d, i) {
+        this.tree.rootNode.open = false;
+        this.tree.rootNode.eachBefore(function(d, i) {
             var regex = new RegExp(name, 'i');
-            if (regex.test(d.name)) {
+            if (regex.test(d.data.name)) {
                 me.showParents(d);
                 d.open = true;
                 d.hidden = false;
