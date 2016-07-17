@@ -15,6 +15,7 @@
 define(['d3', 'SvgTree'], function(d3, SvgTree) {
     'use strict';
 
+
     var CategoryTree = function() {
         SvgTree.call(this);
         this.settings.showCheckboxes = true;
@@ -28,12 +29,14 @@ define(['d3', 'SvgTree'], function(d3, SvgTree) {
 
         this.addIcons();
         this.dispatch.on('updateNodes.category', this.updateNodes);
-        this.dispatch.on('prepareLoadedNode.category', this.prepareLoadedNode);
+        this.dispatch.on('loadDataAfter.category', this.loadDataAfter);
         this.dispatch.on('updateSvg.category', this.renderCheckbox);
-        this.dispatch.on('selectedNode.category', this.saveCheckboxes);
+        this.dispatch.on('selectedNode.category', this.selectedNode);
     };
 
     /**
+     * Function relays on node.indeterminate state being up to date
+     *
      * @param {Selection} nodeSelection
      */
     CategoryTree.prototype.updateNodes = function (nodeSelection) {
@@ -42,15 +45,16 @@ define(['d3', 'SvgTree'], function(d3, SvgTree) {
             var ns = nodeSelection
                 .selectAll('.tree-check')
                 .property('indeterminate', function(node){
-                   return me.isCheckboxIndeterminate(node);
+                   return node.indeterminate;
                 });
             ns.selectAll('use')
                 .attr('visibility', function (node) {
-                    if (d3.select(this).classed('icon-checked') && me.isCheckboxChecked(node)) {
+                    var checked = Boolean(node.data.checked);
+                    if (d3.select(this).classed('icon-checked') && checked) {
                         return 'visible';
-                    } else if (d3.select(this).classed('icon-indeterminate') && me.getCheckboxIndeterminate(node) && !me.isCheckboxChecked(node)) {
+                    } else if (d3.select(this).classed('icon-indeterminate') && node.indeterminate && !checked) {
                         return 'visible';
-                    } else if (d3.select(this).classed('icon-check') && !me.getCheckboxIndeterminate(node) && !me.isCheckboxChecked(node)) {
+                    } else if (d3.select(this).classed('icon-check') && !node.indeterminate && !checked) {
                         return 'visible';
                     } else {
                         return 'hidden';
@@ -95,84 +99,93 @@ define(['d3', 'SvgTree'], function(d3, SvgTree) {
     };
 
     /**
+     * Does not modify the data, just checking with early return
+     *
      * @param {Node} node
      */
-    CategoryTree.prototype.isCheckboxChecked = function (node) {
-        return Boolean(node.data.checked);
-    };
-
-    /**
-     * @param {Node} node
-     */
-    CategoryTree.prototype.getCheckboxIndeterminate = function(node) {
-        return node.indeterminate;
-    };
-
-    /**
-     * @param {Node} node
-     */
-    CategoryTree.prototype.isCheckboxIndeterminate = function(node) {
-        /**
-         * Display states for the node
-         *
-         * checked: node is checked
-         * unchecked: node is unchecked and all children are unchecked
-         * indeterminate: node is unchecked and at least one child is checked
-         *
-         */
-
-        // indeterminate status already known
-
-        // if a node has no children it cannot be indeterminate, if it is checked itself don't hide that by overlaying with indeterminate state
-        if (!node.children || node.data.checked) {
+    CategoryTree.prototype.hasCheckedOrIndeterminateChildren = function(node) {
+        if (!node.children) {
             return false;
         }
 
-        return this.hasCheckedChildren(node);
-    };
-
-    /**
-     * @param {Node} node
-     */
-    CategoryTree.prototype.hasCheckedChildren = function(node) {
-        var me = this;
-
-        if (!node.children) {
-            return node.data.checked;
-        }
-
-        var hasCheckedChildren = false;
-        node.children.some(function (child) {
-            hasCheckedChildren = me.hasCheckedChildren(child);
-            // save child's indeterminate status to speed up detection
-            child.indeterminate = (!child.children || child.data.checked) ? false : hasCheckedChildren;
-
-            // return in some() skips rest if true
-            return hasCheckedChildren;
+        var hasCheckedChildren = node.children.some(function (child) {
+            if (child.data.checked || child.indeterminate) {
+                return true;
+            }
         });
         return hasCheckedChildren;
     };
 
     /**
+     * Updates the indeterminate state for ancestors of the current node
+     *
      * @param {Node} node
      */
-    CategoryTree.prototype.prepareLoadedNode = function (node) {
-        if (this.settings.showCheckboxes) {
-            node.indeterminate = this.isCheckboxIndeterminate(node);
-        }
+    CategoryTree.prototype.updateAncestorsIndetermineState = function (node) {
+        var me = this;
+        //foreach ancestor except node itself
+        node.ancestors().slice(1).forEach(function (n) {
+            n.indeterminate = (node.data.checked || node.indeterminate) ? true : me.hasCheckedOrIndeterminateChildren(n);
+        });
     };
+
+
+    /**
+     * Resets the node.indeterminate for the whole tree
+     * It's done once after loading data. Later indeterminate state is updated just for the subset of nodes
+     */
+    CategoryTree.prototype.loadDataAfter = function () {
+        this.rootNode.each(function(node) {
+            node.indeterminate = false;
+        });
+        this.calculateIndeterminate(this.rootNode);
+    };
+
+    /**
+     * Sets indeterminate state for a subtree. It relays on the tree to have indeterminate state reset beforehand.
+     *
+     * @param {Node} node
+     * @returns {boolean|*}
+     */
+    CategoryTree.prototype.calculateIndeterminate = function (node) {
+        if (!node.children) {
+            node.indeterminate = false;
+            return node.indeterminate;
+        }
+
+        node.eachAfter(function (n) {
+            if ((n.data.checked || n.indeterminate) && n.parent) {
+                n.parent.indeterminate = true;
+            }
+        })
+    };
+
 
     /**
      * @param {Node} node
      */
     CategoryTree.prototype.updateTextNode = function(node) {
-        return _super_.updateTextNode.call(this, node) + (this.settings.showCheckboxes && node.data.checked ? ' (checked)' : '');
+        return _super_.updateTextNode.call(this, node) + (this.settings.showCheckboxes && node.data.checked ? ' (checked)' : '') + ( node.indeterminate ? ' (indeterminate)' : '');
     };
 
-    CategoryTree.prototype.saveCheckboxes = function() {
-        var selectedNodes = this.getSelectedNodes();
+    /**
+     * Observer for the selectedNode event
+     * @param {Node} node
+     */
+    CategoryTree.prototype.selectedNode = function (node) {
+        this.updateAncestorsIndetermineState(node);
+        this.saveCheckboxes(node);
+    };
 
+    /**
+     * Sets a comma-separated list of selected nodes identifiers to configured input
+     *
+     * @param {Node} node
+     */
+    CategoryTree.prototype.saveCheckboxes = function(node) {
         if (typeof this.settings.inputName !== 'undefined') {
+            var selectedNodes = this.getSelectedNodes();
+
             d3
                 .select(this.settings.inputName)
                 .property('value', selectedNodes.map(function(d) {return d.data.identifier}));

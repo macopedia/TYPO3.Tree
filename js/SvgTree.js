@@ -51,7 +51,7 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
             $.extend(this.settings, settings);
             var me = this;
             this.selector = selector;
-            this.dispatch = d3.dispatch('updateNodes', 'updateSvg', 'prepareLoadedNode', 'selectedNode');
+            this.dispatch = d3.dispatch('updateNodes', 'updateSvg', 'loadDataAfter', 'prepareLoadedNode', 'selectedNode');
             this.svg = d3
                 .select(selector)
                 .append('svg')
@@ -124,8 +124,8 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
                     //dispatch event
                     me.dispatch.call("prepareLoadedNode", me, n);
                 });
-
                 me.rootNode = rootNode;
+                me.dispatch.call("loadDataAfter", me);
                 me.prepareDataForVisibleNodes();
                 me.update();
             });
@@ -372,7 +372,6 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
             } else {
                 this.showChildren(node);
             }
-            this.update();
         },
 
         /**
@@ -413,7 +412,7 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
 
             node.data.checked = !checked;
 
-            this.dispatch.call("selectedNode", this);
+            this.dispatch.call("selectedNode", this, node);
             this.update();
         },
 
