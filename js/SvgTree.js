@@ -51,7 +51,7 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
             $.extend(this.settings, settings);
             var me = this;
             this.selector = selector;
-            this.dispatch = d3.dispatch('updateNodes', 'updateSvg', 'loadDataAfter', 'prepareLoadedNode', 'selectedNode');
+            this.dispatch = d3.dispatch('updateNodes', 'updateSvg', 'loadDataAfter', 'prepareLoadedNode', 'nodeSelectedAfter');
             this.svg = d3
                 .select(selector)
                 .append('svg')
@@ -122,10 +122,10 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
                         me.settings.unselectableElements.push(n.data.identifier);
                     }
                     //dispatch event
-                    me.dispatch.call("prepareLoadedNode", me, n);
+                    me.dispatch.call('prepareLoadedNode', me, n);
                 });
                 me.rootNode = rootNode;
-                me.dispatch.call("loadDataAfter", me);
+                me.dispatch.call('loadDataAfter', me);
                 me.prepareDataForVisibleNodes();
                 me.update();
             });
@@ -213,7 +213,7 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
             }
 
             //dispatch event
-            this.dispatch.call("updateNodes", me, nodes);
+            this.dispatch.call('updateNodes', me, nodes);
         },
         updateLinks: function (nodes) {
             var me = this;
@@ -299,7 +299,7 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
                     .on('click', me.clickOnIcon);
             }
 
-            this.dispatch.call("updateSvg", me, nodeEnter);
+            this.dispatch.call('updateSvg', me, nodeEnter);
 
             // append the text element
             nodeEnter
@@ -412,7 +412,7 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
 
             node.data.checked = !checked;
 
-            this.dispatch.call("selectedNode", this, node);
+            this.dispatch.call("nodeSelectedAfter", this, node);
             this.update();
         },
 

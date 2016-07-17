@@ -31,7 +31,7 @@ define(['d3', 'SvgTree'], function(d3, SvgTree) {
         this.dispatch.on('updateNodes.category', this.updateNodes);
         this.dispatch.on('loadDataAfter.category', this.loadDataAfter);
         this.dispatch.on('updateSvg.category', this.renderCheckbox);
-        this.dispatch.on('selectedNode.category', this.selectedNode);
+        this.dispatch.on('nodeSelectedAfter.category', this.nodeSelectedAfter);
     };
 
     /**
@@ -64,7 +64,9 @@ define(['d3', 'SvgTree'], function(d3, SvgTree) {
     };
 
     /**
-     * @param {Selection} nodeSelection
+     * Adds svg elements for checkbox rendering.
+     *
+     * @param {Selection} nodeSelection ENTER selection (only new DOM objects)
      */
     CategoryTree.prototype.renderCheckbox = function (nodeSelection) {
         var me = this;
@@ -172,7 +174,7 @@ define(['d3', 'SvgTree'], function(d3, SvgTree) {
      * Observer for the selectedNode event
      * @param {Node} node
      */
-    CategoryTree.prototype.selectedNode = function (node) {
+    CategoryTree.prototype.nodeSelectedAfter = function (node) {
         this.updateAncestorsIndetermineState(node);
         this.saveCheckboxes(node);
     };
