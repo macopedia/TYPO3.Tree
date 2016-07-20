@@ -228,6 +228,10 @@ input[type="text"] {
  display: inline-block;
 }
 
+.tree-wrapper {
+  height: 400px;
+  overflow-y: scroll;
+}
 
 /**
 backend styles

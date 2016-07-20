@@ -15,7 +15,6 @@
 define(['d3', 'SvgTree'], function(d3, SvgTree) {
     'use strict';
 
-
     var CategoryTree = function() {
         SvgTree.call(this);
         this.settings.showCheckboxes = true;
@@ -147,12 +146,11 @@ define(['d3', 'SvgTree'], function(d3, SvgTree) {
      * Sets indeterminate state for a subtree. It relays on the tree to have indeterminate state reset beforehand.
      *
      * @param {Node} node
-     * @returns {boolean|*}
      */
     CategoryTree.prototype.calculateIndeterminate = function (node) {
         if (!node.children) {
             node.indeterminate = false;
-            return node.indeterminate;
+            return;
         }
 
         node.eachAfter(function (n) {
@@ -215,7 +213,7 @@ define(['d3', 'SvgTree'], function(d3, SvgTree) {
             }
         ];
 
-        var icons = this.iconElements
+        var icons = this.iconsContainer
             .selectAll('.icon-def')
             .data(iconsData);
         icons

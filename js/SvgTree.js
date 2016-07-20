@@ -1,5 +1,11 @@
-define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'], function ($, d3, d3hierarchy, d3drag, d3dispatch, d3selection) {
+define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'], function ($, d3) {
     'use strict';
+    /**
+     * Returns descendants of the current node in the pre-order traversal, such that a given node is only visited
+     * after all of its ancestors have already been visited. In other words "children before siblings"
+     *
+     * @returns {Node[]}
+     */
     d3.hierarchy.prototype.descendantsBefore = function () {
         var nodes = [];
         this.eachBefore(function(node) {
@@ -23,25 +29,65 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
             expandUpToLevel: Number.MAX_VALUE
         };
 
-        this.viewportHeight = 0;
-        this.scrollTop = 0;
-        this.scrollHeight = 0;
-        this.scrollBottom = 0;
-        this.svg = null;
-        this.iconElements = null;
-        this.container = null;
-        this.linkElements = null;
-        this.nodeElements = null;
         /**
+         * Root <svg> element
+         *
+         * @type {Selection}
+         */
+        this.svg = null;
+
+        /**
+         * SVG <g> container wrapping all .node elements
+         *
+         * @type {Selection}
+         */
+        this.nodesContainer = null;
+
+        /**
+         * SVG <defs> container wrapping all icon definitions
+         *
+         * @type {Selection}
+         */
+        this.iconsContainer = null;
+
+        /**
+         * SVG <g> container wrapping all links (lines between parent and child)
+         *
+         * @type {Selection}
+         */
+        this.linksContainer = null;
+
+        /**
+         * Tree root node
+         *
          * @type {Node}
          */
         this.rootNode = null;
+
+        /**
+         *
+         * @type {{nodes: Node[], links: Object, icons: Object}}
+         */
         this.data = {};
-        this.visibleRows = 0;
-        this.position = 0;
-        this.visibleNodesCount = 0;
+
+        /**
+         * D3 event dispatcher
+         *
+         * @type {Object}
+         */
         this.dispatch = null;
+
+        /**
+         * CSS selector for wrapper holding the SVG
+         * Height of this wrapper is important (we only render as many nodes as fit in the wrapper
+         *
+         * @type {string}
+         */
         this.selector = null;
+        this.viewportHeight = 0;
+        this.scrollTop = 0;
+        this.scrollBottom = 0;
+        this.position = 0;
     };
 
     SvgTree.prototype = {
@@ -57,22 +103,22 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
                 .append('svg')
                 .attr('version', '1.1')
                 .attr('width', '100%');
-            this.container = this.svg
+            var container = this.svg
                 .append('g')
                 .attr('transform', 'translate(' + (this.settings.indentWidth / 2) + ',' + (this.settings.nodeHeight / 2) + ')');
-            this.linkElements = this.container.append('g')
+            this.linksContainer = container.append('g')
                 .attr('class', 'links');
-            this.nodeElements = this.container.append('g')
+            this.nodesContainer = container.append('g')
                 .attr('class', 'nodes');
             if (this.settings.showIcons) {
-                this.iconElements = this.svg.append('defs');
+                this.iconsContainer = this.svg.append('defs');
             }
 
 
             this.updateScrollPosition();
             this.loadData();
 
-            $(window).on('resize scroll', function () {
+            $(this.selector).on('resize scroll', function () {
                 me.updateScrollPosition();
                 me.update();
             });
@@ -80,15 +126,10 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
 
         updateScrollPosition: function () {
 
-            var bodyRect = document.body.getBoundingClientRect(),
-                elemRect = document.querySelector(this.selector).getBoundingClientRect(),
-                offset   = elemRect.top - bodyRect.top;
-
-            this.viewportHeight = parseInt(window.innerHeight);
-            this.scrollTop = Math.max(0, (window.pageYOffset - offset) - (this.viewportHeight / 2));
-            this.scrollHeight = parseInt(window.document.body.clientHeight);
+            var $wrapper = $(this.selector);
+            this.viewportHeight = $wrapper.height();
+            this.scrollTop = $wrapper.scrollTop();
             this.scrollBottom = this.scrollTop + this.viewportHeight + (this.viewportHeight / 2);
-            this.viewportHeight = this.viewportHeight * 1.5;
         },
 
         loadData: function () {
@@ -180,8 +221,9 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
             var me = this;
             var visibleRows = Math.ceil(this.viewportHeight / this.settings.nodeHeight + 1);
             var position = Math.floor(Math.max(this.scrollTop, 0) / this.settings.nodeHeight);
+
             var visibleNodes = this.data.nodes.slice(position, position + visibleRows);
-            var nodes = this.nodeElements.selectAll('.node').data(visibleNodes, function (d) {
+            var nodes = this.nodesContainer.selectAll('.node').data(visibleNodes, function (d) {
                 return d.data.identifier;
             });
 
@@ -190,12 +232,9 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
                 .exit()
                 .remove();
 
-            // if (this.visibleRows !== visibleRows || this.position !== position || this.visibleNodesCount !== visibleNodes.length) {
-                this.visibleRows = visibleRows;
-                this.position = position;
-                this.visibleNodesCount = visibleNodes.length;
-                nodes = this.updateSVGElements(nodes);
-            // }
+            nodes = this.updateSVGElements(nodes);
+
+            this.updateLinks();
             // update
             nodes
                 .attr('transform', this.xy)
@@ -215,13 +254,13 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
             //dispatch event
             this.dispatch.call('updateNodes', me, nodes);
         },
-        updateLinks: function (nodes) {
+        updateLinks: function () {
             var me = this;
             var visibleLinks = this.data.links.filter(function (linkData) {
-                return linkData.source.y <= me.scrollBottom && me.scrollTop <= linkData.target.y;
+                return linkData.source.y <= me.scrollBottom && linkData.target.y >= me.scrollTop;
             });
 
-            var links = this.linkElements
+            var links = this.linksContainer
                 .selectAll('.link')
                 .data(visibleLinks);
             // delete
@@ -243,7 +282,7 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
             me.textPosition = 10;
 
             if (me.settings.showIcons) {
-                var icons = this.iconElements
+                var icons = this.iconsContainer
                     .selectAll('.icon-def')
                     .data(this.data.icons, function (i) {
                         return i.identifier;
@@ -264,7 +303,6 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
                         return dom.documentElement.firstChild;
                     });
             }
-            this.updateLinks();
 
             // create the node elements
             var nodeEnter = nodes
@@ -296,7 +334,7 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
                     .append('use')
                     .attr('x', 8)
                     .attr('y', -8)
-                    .on('click', me.clickOnIcon);
+                    .on('click', this.clickOnIcon.bind(me));
             }
 
             this.dispatch.call('updateSvg', me, nodeEnter);
@@ -306,10 +344,8 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
                 .append('text')
                 .attr('dx', me.textPosition)
                 .attr('dy', 5)
-                .on('click', function (node) {
-                    me.clickOnLabel(node);
-                })
-                .on('dblclick', me.dblClickOnLabel);
+                .on('click', this.clickOnLabel.bind(me))
+                .on('dblclick', this.dblClickOnLabel.bind(me));
 
             return nodes.merge(nodeEnter);
         },
@@ -412,7 +448,7 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
 
             node.data.checked = !checked;
 
-            this.dispatch.call("nodeSelectedAfter", this, node);
+            this.dispatch.call('nodeSelectedAfter', this, node);
             this.update();
         },
 
