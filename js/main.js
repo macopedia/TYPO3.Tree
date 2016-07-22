@@ -13,7 +13,7 @@ require(['SvgTree', 'CategoryTree', 'PageTree', 'SvgTreeToolbar'], function (Svg
     });
 
     var treeCategoryToolbar = new Toolbar;
-    treeCategoryToolbar.initialize('.toolbar', treeCategory);
+    treeCategoryToolbar.initialize('.tree-category');
 
     var treePage = new PageTree;
     treePage.initialize('.tree-page', {

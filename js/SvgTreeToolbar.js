@@ -12,7 +12,7 @@
  */
 
 
-define(['SvgTree', 'jquery'], function(SvgTree, $) {
+define(['SvgTree', 'jquery'], function (SvgTree, $) {
     'use strict';
 
     /**
@@ -21,30 +21,33 @@ define(['SvgTree', 'jquery'], function(SvgTree, $) {
      */
     var Toolbar = function () {
         this.settings = {
-            $collapseAllBtn: '.collapse-all-btn',
-            $expandAllBtn: '.expand-all-btn',
-            $searchInput: '.search-input'
-        }
-
+            toolbarSelector: '.tree-toolbar',
+            collapseAllBtn: '.collapse-all-btn',
+            expandAllBtn: '.expand-all-btn',
+            searchInput: '.search-input'
+        };
+        /**
+         * @type {SvgTree}
+         */
+        this.tree = null;
     };
 
     /**
      * @constructs
-     * @param {string} selector
-     * @param {SvgTree} tree
+     * @param {string} treeSelector
      * @param settings
      */
-    Toolbar.prototype.initialize = function(selector, tree, settings) {
+    Toolbar.prototype.initialize = function (treeSelector, settings) {
         var me = this,
-            $toolbar = $(selector);
-
-        if (typeof tree !== 'undefined') {
-            this.tree = tree;
+            $treeWrapper = $(treeSelector),
+            $toolbar = $treeWrapper.siblings(this.settings.toolbarSelector);
+        if (!$treeWrapper.data('svgtree-initialized') || typeof $treeWrapper.data('svgtree') !== 'object') {
+            return;
         }
-
-        $toolbar.find(this.settings.$collapseAllBtn).on('click', this.collapseAll.bind(this));
-        $toolbar.find(this.settings.$expandAllBtn).on('click', this.expandAll.bind(this));
-        $toolbar.find(this.settings.$searchInput).on('input', function(){
+        this.tree = $treeWrapper.data('svgtree');
+        $toolbar.find(this.settings.collapseAllBtn).on('click', this.collapseAll.bind(this));
+        $toolbar.find(this.settings.expandAllBtn).on('click', this.expandAll.bind(this));
+        $toolbar.find(this.settings.searchInput).on('input', function () {
             me.search.call(me, this);
         });
     };
@@ -52,14 +55,14 @@ define(['SvgTree', 'jquery'], function(SvgTree, $) {
     /**
      * Collapse children of root node
      */
-    Toolbar.prototype.collapseAll = function() {
+    Toolbar.prototype.collapseAll = function () {
         this.tree.collapseAll();
     };
 
     /**
      * Expand all nodes
      */
-    Toolbar.prototype.expandAll = function() {
+    Toolbar.prototype.expandAll = function () {
         this.tree.expandAll();
     };
 
@@ -67,12 +70,12 @@ define(['SvgTree', 'jquery'], function(SvgTree, $) {
      * Find node by name
      * @param input
      */
-    Toolbar.prototype.search = function(input) {
+    Toolbar.prototype.search = function (input) {
         var me = this,
             name = $(input).val();
 
         this.tree.rootNode.open = false;
-        this.tree.rootNode.eachBefore(function(d, i) {
+        this.tree.rootNode.eachBefore(function (d, i) {
             var regex = new RegExp(name, 'i');
             if (regex.test(d.data.name)) {
                 me.showParents(d);
@@ -92,7 +95,7 @@ define(['SvgTree', 'jquery'], function(SvgTree, $) {
      * @param d
      * @returns {boolean}
      */
-    Toolbar.prototype.showParents = function(d) {
+    Toolbar.prototype.showParents = function (d) {
         if (!d.parent) {
             return true;
         }
