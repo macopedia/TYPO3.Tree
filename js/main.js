@@ -9,7 +9,8 @@ require(['SvgTree', 'CategoryTree', 'PageTree', 'SvgTreeToolbar'], function (Svg
         'dataUrl': 'tree-category.json',
         'showCheckboxes': true,
         'inputName': '.selected-nodes',
-        'showIcons': true
+        'showIcons': true,
+        'unselectableElements': ['573b150a78e4f228880592']
     });
 
     var treeCategoryToolbar = new Toolbar;
