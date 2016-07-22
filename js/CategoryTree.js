@@ -12,10 +12,10 @@
  */
 
 
-define(['d3', 'SvgTree'], function(d3, SvgTree) {
+define(['d3', 'SvgTree'], function (d3, SvgTree) {
     'use strict';
 
-    var CategoryTree = function() {
+    var CategoryTree = function () {
         SvgTree.call(this);
         this.settings.showCheckboxes = true;
     };
@@ -23,7 +23,7 @@ define(['d3', 'SvgTree'], function(d3, SvgTree) {
     CategoryTree.prototype = Object.create(SvgTree.prototype);
     var _super_ = SvgTree.prototype;
 
-    CategoryTree.prototype.initialize = function(selector, settings) {
+    CategoryTree.prototype.initialize = function (selector, settings) {
         _super_.initialize.call(this, selector, settings);
 
         this.addIcons();
@@ -41,12 +41,8 @@ define(['d3', 'SvgTree'], function(d3, SvgTree) {
     CategoryTree.prototype.updateNodes = function (nodeSelection) {
         var me = this;
         if (this.settings.showCheckboxes) {
-            var ns = nodeSelection
-                .selectAll('.tree-check')
-                .property('indeterminate', function(node){
-                   return node.indeterminate;
-                });
-            ns.selectAll('use')
+            nodeSelection
+                .selectAll('.tree-check use')
                 .attr('visibility', function (node) {
                     var checked = Boolean(node.data.checked);
                     if (d3.select(this).classed('icon-checked') && checked) {
@@ -58,7 +54,7 @@ define(['d3', 'SvgTree'], function(d3, SvgTree) {
                     } else {
                         return 'hidden';
                     }
-            });
+                });
         }
     };
 
@@ -72,10 +68,13 @@ define(['d3', 'SvgTree'], function(d3, SvgTree) {
         if (this.settings.showCheckboxes) {
             this.textPosition = 50;
             //this can be simplified to single "use" element with changing href on click when we drop IE11 on WIN7 support
-            var g = nodeSelection
+            var g = nodeSelection.filter(function (node) {
+                    //do not render checkbox if node is not selectable
+                    return me.isNodeSelectable(node);
+                })
                 .append('g')
-                .attr('class','tree-check')
-                .on('click', function(d){
+                .attr('class', 'tree-check')
+                .on('click', function (d) {
                     me.selectNode(d);
                 });
             g.append('use')
@@ -104,17 +103,16 @@ define(['d3', 'SvgTree'], function(d3, SvgTree) {
      *
      * @param {Node} node
      */
-    CategoryTree.prototype.hasCheckedOrIndeterminateChildren = function(node) {
+    CategoryTree.prototype.hasCheckedOrIndeterminateChildren = function (node) {
         if (!node.children) {
             return false;
         }
 
-        var hasCheckedChildren = node.children.some(function (child) {
+        return node.children.some(function (child) {
             if (child.data.checked || child.indeterminate) {
                 return true;
             }
         });
-        return hasCheckedChildren;
     };
 
     /**
@@ -136,7 +134,7 @@ define(['d3', 'SvgTree'], function(d3, SvgTree) {
      * It's done once after loading data. Later indeterminate state is updated just for the subset of nodes
      */
     CategoryTree.prototype.loadDataAfter = function () {
-        this.rootNode.each(function(node) {
+        this.rootNode.each(function (node) {
             node.indeterminate = false;
         });
         this.calculateIndeterminate(this.rootNode);
@@ -164,7 +162,7 @@ define(['d3', 'SvgTree'], function(d3, SvgTree) {
     /**
      * @param {Node} node
      */
-    CategoryTree.prototype.updateTextNode = function(node) {
+    CategoryTree.prototype.updateTextNode = function (node) {
         return _super_.updateTextNode.call(this, node) + (this.settings.showCheckboxes && node.data.checked ? ' (checked)' : '') + ( node.indeterminate ? ' (indeterminate)' : '');
     };
 
@@ -182,13 +180,15 @@ define(['d3', 'SvgTree'], function(d3, SvgTree) {
      *
      * @param {Node} node
      */
-    CategoryTree.prototype.saveCheckboxes = function(node) {
+    CategoryTree.prototype.saveCheckboxes = function (node) {
         if (typeof this.settings.inputName !== 'undefined') {
             var selectedNodes = this.getSelectedNodes();
 
             d3
                 .select(this.settings.inputName)
-                .property('value', selectedNodes.map(function(d) {return d.data.identifier}));
+                .property('value', selectedNodes.map(function (d) {
+                    return d.data.identifier
+                }));
         }
     };
 
@@ -220,7 +220,7 @@ define(['d3', 'SvgTree'], function(d3, SvgTree) {
             .enter()
             .append('g')
             .attr('class', 'icon-def')
-            .attr('id',function (i) {
+            .attr('id', function (i) {
                 return i.identifier;
             })
             .append(function (i) {
