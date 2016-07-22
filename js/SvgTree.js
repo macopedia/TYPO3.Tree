@@ -8,8 +8,8 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
      */
     d3.hierarchy.prototype.descendantsBefore = function () {
         var nodes = [];
-        this.eachBefore(function(node) {
-          nodes.push(node);
+        this.eachBefore(function (node) {
+            nodes.push(node);
         });
         return nodes;
     };
@@ -78,12 +78,12 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
         this.dispatch = null;
 
         /**
-         * CSS selector for wrapper holding the SVG
+         * jQuery object of wrapper holding the SVG
          * Height of this wrapper is important (we only render as many nodes as fit in the wrapper
          *
-         * @type {string}
+         * @type {Object}
          */
-        this.selector = null;
+        this.wrapper = null;
         this.viewportHeight = 0;
         this.scrollTop = 0;
         this.scrollBottom = 0;
@@ -94,9 +94,15 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
         constructor: SvgTree,
 
         initialize: function (selector, settings) {
+            var $wrapper = $(selector);
+            // Do nothing if already initialized
+            if ($wrapper.data('svgtree-initialized')) {
+                return;
+            }
+
             $.extend(this.settings, settings);
             var me = this;
-            this.selector = selector;
+            this.wrapper = $wrapper;
             this.dispatch = d3.dispatch('updateNodes', 'updateSvg', 'loadDataAfter', 'prepareLoadedNode', 'nodeSelectedAfter');
             this.svg = d3
                 .select(selector)
@@ -114,21 +120,21 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
                 this.iconsContainer = this.svg.append('defs');
             }
 
-
             this.updateScrollPosition();
             this.loadData();
 
-            $(this.selector).on('resize scroll', function () {
+            this.wrapper.on('resize scroll', function () {
                 me.updateScrollPosition();
                 me.update();
             });
+            this.wrapper.data('svgtree', this);
+            this.wrapper.data('svgtree-initialized', true);
         },
 
         updateScrollPosition: function () {
 
-            var $wrapper = $(this.selector);
-            this.viewportHeight = $wrapper.height();
-            this.scrollTop = $wrapper.scrollTop();
+            this.viewportHeight = this.wrapper.height();
+            this.scrollTop = this.wrapper.scrollTop();
             this.scrollBottom = this.scrollTop + this.viewportHeight + (this.viewportHeight / 2);
         },
 
@@ -272,7 +278,7 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
             links.enter().append('path')
                 .attr('class', 'link')
                 //create + update
-              .merge(links)
+                .merge(links)
                 .attr('d', this.squaredDiagonal.bind(me));
         },
 
