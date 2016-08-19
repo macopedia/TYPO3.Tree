@@ -15,22 +15,32 @@
 define(['d3', 'SvgTree'], function (d3, SvgTree) {
     'use strict';
 
-    var CategoryTree = function () {
+    /**
+     * @constructor
+     * @exports TYPO3/CMS/Backend/FormEngine/Element/SelectTree
+     */
+    var SelectTree = function () {
         SvgTree.call(this);
         this.settings.showCheckboxes = true;
     };
 
-    CategoryTree.prototype = Object.create(SvgTree.prototype);
+    SelectTree.prototype = Object.create(SvgTree.prototype);
     var _super_ = SvgTree.prototype;
 
-    CategoryTree.prototype.initialize = function (selector, settings) {
+    /**
+     * SelectTree initialization
+     *
+     * @param {String} selector
+     * @param {Object} settings
+     */
+    SelectTree.prototype.initialize = function (selector, settings) {
         _super_.initialize.call(this, selector, settings);
 
         this.addIcons();
-        this.dispatch.on('updateNodes.category', this.updateNodes);
-        this.dispatch.on('loadDataAfter.category', this.loadDataAfter);
-        this.dispatch.on('updateSvg.category', this.renderCheckbox);
-        this.dispatch.on('nodeSelectedAfter.category', this.nodeSelectedAfter);
+        this.dispatch.on('updateNodes.selectTree', this.updateNodes);
+        this.dispatch.on('loadDataAfter.selectTree', this.loadDataAfter);
+        this.dispatch.on('updateSvg.selectTree', this.renderCheckbox);
+        this.dispatch.on('nodeSelectedAfter.selectTree', this.nodeSelectedAfter);
     };
 
     /**
@@ -38,7 +48,7 @@ define(['d3', 'SvgTree'], function (d3, SvgTree) {
      *
      * @param {Selection} nodeSelection
      */
-    CategoryTree.prototype.updateNodes = function (nodeSelection) {
+    SelectTree.prototype.updateNodes = function (nodeSelection) {
         var me = this;
         if (this.settings.showCheckboxes) {
             nodeSelection
@@ -63,14 +73,14 @@ define(['d3', 'SvgTree'], function (d3, SvgTree) {
      *
      * @param {Selection} nodeSelection ENTER selection (only new DOM objects)
      */
-    CategoryTree.prototype.renderCheckbox = function (nodeSelection) {
+    SelectTree.prototype.renderCheckbox = function (nodeSelection) {
         var me = this;
         if (this.settings.showCheckboxes) {
             this.textPosition = 50;
             //this can be simplified to single "use" element with changing href on click when we drop IE11 on WIN7 support
             var g = nodeSelection.filter(function (node) {
                     //do not render checkbox if node is not selectable
-                    return me.isNodeSelectable(node);
+                    return me.isNodeSelectable(node) || Boolean(node.data.checked);
                 })
                 .append('g')
                 .attr('class', 'tree-check')
@@ -103,7 +113,7 @@ define(['d3', 'SvgTree'], function (d3, SvgTree) {
      *
      * @param {Node} node
      */
-    CategoryTree.prototype.hasCheckedOrIndeterminateChildren = function (node) {
+    SelectTree.prototype.hasCheckedOrIndeterminateChildren = function (node) {
         if (!node.children) {
             return false;
         }
@@ -120,7 +130,7 @@ define(['d3', 'SvgTree'], function (d3, SvgTree) {
      *
      * @param {Node} node
      */
-    CategoryTree.prototype.updateAncestorsIndetermineState = function (node) {
+    SelectTree.prototype.updateAncestorsIndetermineState = function (node) {
         var me = this;
         //foreach ancestor except node itself
         node.ancestors().slice(1).forEach(function (n) {
@@ -133,7 +143,7 @@ define(['d3', 'SvgTree'], function (d3, SvgTree) {
      * Resets the node.indeterminate for the whole tree
      * It's done once after loading data. Later indeterminate state is updated just for the subset of nodes
      */
-    CategoryTree.prototype.loadDataAfter = function () {
+    SelectTree.prototype.loadDataAfter = function () {
         this.rootNode.each(function (node) {
             node.indeterminate = false;
         });
@@ -145,7 +155,7 @@ define(['d3', 'SvgTree'], function (d3, SvgTree) {
      *
      * @param {Node} node
      */
-    CategoryTree.prototype.calculateIndeterminate = function (node) {
+    SelectTree.prototype.calculateIndeterminate = function (node) {
         if (!node.children) {
             node.indeterminate = false;
             return;
@@ -162,15 +172,16 @@ define(['d3', 'SvgTree'], function (d3, SvgTree) {
     /**
      * @param {Node} node
      */
-    CategoryTree.prototype.updateTextNode = function (node) {
+    SelectTree.prototype.updateTextNode = function (node) {
         return _super_.updateTextNode.call(this, node) + (this.settings.showCheckboxes && node.data.checked ? ' (checked)' : '') + ( node.indeterminate ? ' (indeterminate)' : '');
     };
 
     /**
      * Observer for the selectedNode event
+     *
      * @param {Node} node
      */
-    CategoryTree.prototype.nodeSelectedAfter = function (node) {
+    SelectTree.prototype.nodeSelectedAfter = function (node) {
         this.updateAncestorsIndetermineState(node);
         this.saveCheckboxes(node);
     };
@@ -180,7 +191,7 @@ define(['d3', 'SvgTree'], function (d3, SvgTree) {
      *
      * @param {Node} node
      */
-    CategoryTree.prototype.saveCheckboxes = function (node) {
+    SelectTree.prototype.saveCheckboxes = function (node) {
         if (typeof this.settings.inputName !== 'undefined') {
             var selectedNodes = this.getSelectedNodes();
 
@@ -195,7 +206,7 @@ define(['d3', 'SvgTree'], function (d3, SvgTree) {
     /**
      * Add icons imitating checkboxes
      */
-    CategoryTree.prototype.addIcons = function () {
+    SelectTree.prototype.addIcons = function () {
 
         var iconsData = [
             {
@@ -232,5 +243,5 @@ define(['d3', 'SvgTree'], function (d3, SvgTree) {
 
     };
 
-    return CategoryTree;
+    return SelectTree;
 });

@@ -1,4 +1,4 @@
-define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'], function ($, d3) {
+define(['jquery', 'd3'], function ($, d3) {
     'use strict';
     /**
      * Returns descendants of the current node in the pre-order traversal, such that a given node is only visited
@@ -14,6 +14,10 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
         return nodes;
     };
 
+    /**
+     * @constructor
+     * @exports SvgTree
+     */
     var SvgTree = function () {
         this.settings = {
             showCheckboxes: false,
@@ -26,7 +30,12 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
                 maxItems: Number.MAX_VALUE
             },
             unselectableElements: [],
-            expandUpToLevel: Number.MAX_VALUE
+            expandUpToLevel: null,
+            readOnlyMode: false,
+            /**
+             * List node identifiers which can not be selected together with any other node
+             */
+            exclusiveNodesIdentifiers : ''
         };
 
         /**
@@ -81,18 +90,31 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
          * jQuery object of wrapper holding the SVG
          * Height of this wrapper is important (we only render as many nodes as fit in the wrapper
          *
-         * @type {Object}
+         * @type {jQuery}
          */
         this.wrapper = null;
         this.viewportHeight = 0;
         this.scrollTop = 0;
         this.scrollBottom = 0;
         this.position = 0;
+
+        /**
+         * Exclusive node which is currently selected
+         *
+         * @type {Node}
+         */
+        this.exclusiveSelectedNode = null;
     };
 
     SvgTree.prototype = {
         constructor: SvgTree,
 
+        /**
+         * Initializes the tree component - created basic markup, loads and renders data
+         *
+         * @param {String} selector
+         * @param {Object} settings
+         */
         initialize: function (selector, settings) {
             var $wrapper = $(selector);
             // Do nothing if already initialized
@@ -129,8 +151,12 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
             });
             this.wrapper.data('svgtree', this);
             this.wrapper.data('svgtree-initialized', true);
+            this.wrapper.trigger('svgTree.initialized');
         },
 
+        /**
+         * Updates variables used for visible nodes calculation
+         */
         updateScrollPosition: function () {
 
             this.viewportHeight = this.wrapper.height();
@@ -138,6 +164,9 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
             this.scrollBottom = this.scrollTop + this.viewportHeight + (this.viewportHeight / 2);
         },
 
+        /**
+         * Loads tree data (json) from configured url
+         */
         loadData: function () {
             var me = this;
             d3.json(this.settings.dataUrl, function (error, json) {
@@ -151,7 +180,7 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
                 d3.tree(rootNode);
 
                 rootNode.each(function (n) {
-                    n.open = n.depth < me.settings.expandUpToLevel;
+                    n.open = (me.settings.expandUpToLevel !== null) ? n.depth < me.settings.expandUpToLevel : Boolean(n.expanded);
                     n.hasChildren = (n.children || n._children) ? 1 : 0;
                     n.parents = [];
                     n._isDragged = false;
@@ -178,6 +207,11 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
             });
         },
 
+        /**
+         * Filters out invisible nodes (collapsed) from the full dataset (this.rootNode)
+         * and enriches dataset with additional properties
+         * Visible dataset is stored in this.data
+         */
         prepareDataForVisibleNodes: function () {
             var me = this;
 
@@ -223,6 +257,9 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
             this.svg.attr('height', this.data.nodes.length * this.settings.nodeHeight);
         },
 
+        /**
+         * Renders the subset of the tree nodes fitting the viewport (adding, modifying and removing SVG nodes)
+         */
         update: function () {
             var me = this;
             var visibleRows = Math.ceil(this.viewportHeight / this.settings.nodeHeight + 1);
@@ -248,8 +285,8 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
                 .text(this.updateTextNode.bind(me));
             nodes
                 .select('.toggle')
-                .attr('transform', this.updateToggleTransform)
-                .attr('visibility', this.updateToggleVisibility);
+                .attr('transform', this.updateChevronTransform)
+                .attr('visibility', this.updateChevronVisibility);
 
             if (this.settings.showIcons) {
                 nodes
@@ -260,6 +297,10 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
             //dispatch event
             this.dispatch.call('updateNodes', me, nodes);
         },
+
+        /**
+         * Renders links(lines) between parent and child nodes
+         */
         updateLinks: function () {
             var me = this;
             var visibleLinks = this.data.links.filter(function (linkData) {
@@ -282,7 +323,12 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
                 .attr('d', this.squaredDiagonal.bind(me));
         },
 
-
+        /**
+         * Adds missing svg nodes
+         *
+         * @param {Selection} nodes
+         * @returns {Selection}
+         */
         updateSVGElements: function (nodes) {
             var me = this;
             me.textPosition = 10;
@@ -356,22 +402,52 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
             return nodes.merge(nodeEnter);
         },
 
+        /**
+         * Computes the tree item label based on the data
+         *
+         * @param {Node} node
+         * @returns {String}
+         */
         updateTextNode: function (node) {
             return node.data.name;
         },
 
-        updateToggleTransform: function (node) {
+        /**
+         * Returns chevron 'transform' attribute value
+         *
+         * @param {Node} node
+         * @returns {String}
+         */
+        updateChevronTransform: function (node) {
             return node.open ? 'translate(8 -8) rotate(90)' : 'translate(-8 -8) rotate(0)';
         },
 
-        updateToggleVisibility: function (node) {
+        /**
+         * Computes chevron 'visibility' attribute value
+         *
+         * @param {Node} node
+         * @returns {String}
+         */
+        updateChevronVisibility: function (node) {
             return node.hasChildren ? 'visible' : 'hidden';
         },
 
+        /**
+         * Returns icon's href attribute value
+         *
+         * @param {Node} node
+         * @returns {String}
+         */
         updateIconId: function (node) {
             return '#icon-' + node.iconHash;
         },
 
+        /**
+         * Returns a SVG path's 'd' attribute value
+         *
+         * @param {Object} link
+         * @returns {String}
+         */
         squaredDiagonal: function (link) {
             var me = this;
 
@@ -391,12 +467,20 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
         },
 
         /**
+         * Returns a 'transform' attribute value for the tree element (absolute positioning)
+         *
          * @param {Node} node
          */
         xy: function (node) {
             return 'translate(' + node.x + ',' + node.y + ')';
         },
 
+        /**
+         * Simple hash function used to create icon href's
+         *
+         * @param {String} s
+         * @returns {String}
+         */
         hashCode: function (s) {
             return s.split('')
                 .reduce(function (a, b) {
@@ -406,38 +490,8 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
         },
 
         /**
-         * @param {Node} node
-         */
-        chevronClick: function (node) {
-            if (node.open) {
-                this.hideChildren(node);
-            } else {
-                this.showChildren(node);
-            }
-        },
-
-        /**
-         * @param {Node} node
-         */
-        hideChildren: function (node) {
-            node.open = false;
-            this.prepareDataForVisibleNodes();
-            this.update();
-        },
-
-        /**
-         * @param {Node} node
-         */
-        showChildren: function (node) {
-            node.open = true;
-            this.prepareDataForVisibleNodes();
-            this.update();
-        },
-
-        insertBetween: function (before, after) {
-        },
-
-        /**
+         * Node selection logic (triggered by different events)
+         *
          * @param {Node} node
          */
         selectNode: function (node) {
@@ -445,6 +499,8 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
                 return;
             }
             var checked = node.data.checked;
+            this.handleExclusiveNodeSelection(node);
+
             if (this.settings.validation && this.settings.validation.maxItems) {
                 var selectedNodes = this.getSelectedNodes();
                 if (!checked && selectedNodes.length >= this.settings.validation.maxItems) {
@@ -459,16 +515,49 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
         },
 
         /**
+         * Handle exclusive nodes functionality
+         * If a node is one of the exclusiveNodesIdentifiers list, all other nodes has to be unselected before selecting this node.
+         *
+         * @param {Node} node
+         */
+        handleExclusiveNodeSelection: function (node) {
+            var exclusiveKeys = this.settings.exclusiveNodesIdentifiers.split(','),
+                me = this;
+            if (this.settings.exclusiveNodesIdentifiers.length && node.data.checked === false) {
+                if (exclusiveKeys.indexOf('' + node.data.identifier) > -1) {
+                    // this key is exclusive, so uncheck all others
+                    this.rootNode.each(function (node) {
+                        if (node.data.checked === true) {
+                            node.data.checked = false;
+                            me.dispatch.call('nodeSelectedAfter', me, node);
+                        }
+                    });
+                    this.exclusiveSelectedNode = node;
+                } else if (exclusiveKeys.indexOf('' + node.data.identifier) === -1 && this.exclusiveSelectedNode) {
+                    //current node is not exclusive, but other exclusive node is already selected
+                    this.exclusiveSelectedNode.data.checked = false;
+                    this.dispatch.call('nodeSelectedAfter', this, this.exclusiveSelectedNode);
+                    this.exclusiveSelectedNode = null;
+                }
+            }
+        },
+
+        /**
          * Check whether node can be selected, in some cases like parent selector it should not be possible to select
          * element as it's own parent
          *
          * @param {Node} node
-         * @returns {boolean}
+         * @returns {Boolean}
          */
         isNodeSelectable: function (node) {
-            return this.settings.unselectableElements.indexOf(node.data.identifier) == -1;
+            return !this.settings.readOnlyMode && this.settings.unselectableElements.indexOf(node.data.identifier) == -1;
         },
 
+        /**
+         * Returns an array of selected nodes
+         *
+         * @returns {Node[]}
+         */
         getSelectedNodes: function () {
             var selectedNodes = [];
 
@@ -481,7 +570,8 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
         },
 
         /**
-         * @name clickOnIcon
+         * Event handler for clicking on a node's icon
+         *
          * @param {Node} node
          */
         clickOnIcon: function (node) {
@@ -489,7 +579,8 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
         },
 
         /**
-         * @name clickOnLabel
+         * Event handler for click on a node's label/text
+         *
          * @param {Node} node
          */
         clickOnLabel: function (node) {
@@ -497,7 +588,8 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
         },
 
         /**
-         * @name dblClickOnLabel
+         * Event handler for double click on a node's label
+         *
          * @param {Node} node
          */
         dblClickOnLabel: function (node) {
@@ -505,19 +597,54 @@ define(['jquery', 'd3', 'd3-hierarchy', 'd3-drag', 'd3-dispatch', 'd3-selection'
         },
 
         /**
-         * Expand all nodes
+         * Event handler for click on a chevron
+         *
+         * @param {Node} node
          */
-        expandAll: function () {
-
-            this.rootNode.each(function (node) {
-                node.open = true;
-            });
+        chevronClick: function (node) {
+            if (node.open) {
+                this.hideChildren(node);
+            } else {
+                this.showChildren(node);
+            }
             this.prepareDataForVisibleNodes();
             this.update();
         },
 
+        /**
+         * Updates node's data to hide/collapse children
+         *
+         * @param {Node} node
+         */
+        hideChildren: function (node) {
+            node.open = false;
+        },
+
+        /**
+         * Updates node's data to show/expand children
+         *
+         * @param {Node} node
+         */
+        showChildren: function (node) {
+            node.open = true;
+        },
+
+        /**
+         * Expand all nodes and refresh view
+         */
+        expandAll: function () {
+            this.rootNode.each(this.showChildren.bind(this));
+            this.prepareDataForVisibleNodes();
+            this.update();
+        },
+
+        /**
+         * Collapse all nodes recursively and refresh view
+         */
         collapseAll: function () {
-            this.hideChildren(this.rootNode);
+            this.rootNode.each(this.hideChildren.bind(this));
+            this.prepareDataForVisibleNodes();
+            this.update();
         }
 
     };
