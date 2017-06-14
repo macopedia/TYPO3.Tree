@@ -11,23 +11,24 @@
  * The TYPO3 project - inspiring people to share!
  */
 
-
-define(['SvgTree', 'jquery'], function (SvgTree, $) {
+define(['jquery', 'SvgTree'], function($) {
     'use strict';
 
     /**
      * TreeToolbar class
      *
      * @constructor
-     * @exports TreeToolbar
+     * @exports TYPO3/CMS/Backend/FormEngine/Element/TreeToolbar
      */
     var TreeToolbar = function () {
         this.settings = {
             toolbarSelector: '.tree-toolbar',
             collapseAllBtn: '.collapse-all-btn',
             expandAllBtn: '.expand-all-btn',
-            searchInput: '.search-input'
+            searchInput: '.search-input',
+            toggleHideUnchecked: '.hide-unchecked-btn'
         };
+
         /**
          * jQuery object wrapping the SvgTree
          *
@@ -43,22 +44,29 @@ define(['SvgTree', 'jquery'], function (SvgTree, $) {
         this.tree = null;
 
         /**
+         * State of the hide unchecked toggle button
+         *
+         * @type {boolean}
+         * @private
+         */
+        this._hideUncheckedState = false;
+
+        /**
          * Toolbar template
          *
          * @type {jQuery}
          */
         this.template = $(
             '<div class="tree-toolbar btn-toolbar">'+
-                '<div class="input-group">' +
-                    '<span class="input-group-addon input-group-icon filter"></span>' +
-                    '<input type="text" class="form-control search-input" placeholder="Search">' +
-                '</div>' +
-                '<div class="btn-group">' +
-                    '<button type="button" class="btn btn-default expand-all-btn icon-expand-all" title="Expand All"></button>' +
-                '</div>' +
-                '<div class="btn-group">' +
-                    '<button type="button" class="btn btn-default collapse-all-btn icon-collapse-all" title="Collapse All"></button>' +
-                '</div>' +
+            '<div class="input-group">' +
+            '<span class="input-group-addon input-group-icon filter"></span>' +
+            '<input type="text" class="form-control search-input" placeholder="find item">' +
+            '</div>' +
+            '<div class="btn-group">' +
+            '<button type="button" class="btn btn-default expand-all-btn" title="expand all">Expand all</button>' +
+            '<button type="button" class="btn btn-default collapse-all-btn" title="collapse all">Collapse all</button>' +
+            '<button type="button" class="btn btn-default hide-unchecked-btn" title="toggle hide unchecked">Toggle hide unchecked</button>' +
+            '</div>' +
             '</div>'
         )
     };
@@ -95,6 +103,7 @@ define(['SvgTree', 'jquery'], function (SvgTree, $) {
         $toolbar.find(this.settings.searchInput).on('input', function () {
             me.search.call(me, this);
         });
+        $toolbar.find(this.settings.toggleHideUnchecked).on('click', this.toggleHideUnchecked.bind(this));
     };
 
     /**
@@ -120,10 +129,10 @@ define(['SvgTree', 'jquery'], function (SvgTree, $) {
         var me = this,
             name = $(input).val();
 
-        this.tree.rootNode.open = false;
-        this.tree.rootNode.eachBefore(function (node, i) {
+        this.tree.nodes[0].open = false;
+        this.tree.nodes.forEach(function (node) {
             var regex = new RegExp(name, 'i');
-            if (regex.test(node.data.name)) {
+            if (regex.test(node.name)) {
                 me.showParents(node);
                 node.open = true;
                 node.hidden = false;
@@ -137,20 +146,51 @@ define(['SvgTree', 'jquery'], function (SvgTree, $) {
     };
 
     /**
+     * Show only checked items
+     *
+     * @param {HTMLElement} input
+     */
+    TreeToolbar.prototype.toggleHideUnchecked = function (input) {
+        var me = this;
+
+        this._hideUncheckedState = !this._hideUncheckedState;
+
+        if (this._hideUncheckedState) {
+            this.tree.nodes.forEach(function (node) {
+                if (node.checked) {
+                    me.showParents(node);
+                    node.open = true;
+                    node.hidden = false;
+                } else {
+                    node.hidden = true;
+                    node.open = false;
+                }
+            });
+        } else {
+            this.tree.nodes.forEach(function (node) {
+                node.hidden = false;
+            });
+        }
+        this.tree.prepareDataForVisibleNodes();
+        this.tree.update();
+    };
+
+    /**
      * Finds and show all parents of node
      *
      * @param {Node} node
      * @returns {Boolean}
      */
     TreeToolbar.prototype.showParents = function (node) {
-        if (!node.parent) {
+        if (node.parents.length === 0) {
             return true;
         }
 
-        node.parent.hidden = false;
+        var parent = this.tree.nodes[node.parents[0]];
+        parent.hidden = false;
         //expand parent node
-        node.parent.open = true;
-        this.showParents(node.parent);
+        parent.open = true;
+        this.showParents(parent);
     };
 
     return TreeToolbar;

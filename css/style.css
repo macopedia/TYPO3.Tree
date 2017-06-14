@@ -15,7 +15,6 @@ line {
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
-  transition: transform 1s;
 }
 
 .node .toggle {
@@ -144,9 +143,10 @@ input[type="text"] {
 backend styles
 */
 
-.icon-collapse-all {
-	background-image: url("../t3-icons/collapse-all.gif");
+.hide-unchecked-btn, .collapse-all-btn, .expand-all-btn {
+    font-size: 10px;
 }
-.icon-expand-all {
-	background-image: url("../t3-icons/expand-all.gif");
+
+input.selected-nodes {
+    display: none;
 }

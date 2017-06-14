@@ -25,26 +25,36 @@ $icons = [
 ];
 $iconCount = count($icons);
 
-function fakeChildren($depth = 0) {
-    $children = [];
-    $max = rand(0, 9);
-    for ($i = 0; $i < $max; $i++) {
-        $children[] = fakeRecord($depth);
-    }
-    return $children;
-}
-
 function fakeRecord($depth = 0) {
     global $words, $wordsCount, $icons, $iconCount;
-    $record = [
-        'identifier' =>  str_replace('.', '', uniqid('', true)),
-        'name' => $words[rand(0, $wordsCount - 1)],
-        'icon' => $icons[rand(0, $iconCount - 1)],
-        'checked' => rand(0, 1) === 1
-    ];
+
     $depth--;
     if ($depth) {
-        $record['children'] = fakeChildren($depth);
+        $record[] = [
+            'identifier' =>  str_replace('.', '', uniqid('', true)),
+            'name' => $words[rand(0, $wordsCount - 1)],
+            'icon' => $icons[rand(0, $iconCount - 1)],
+            'checked' => rand(0, 1) === 1,
+            'depth' => (4 - $depth),
+            'hasChildren' => true
+        ];
+
+        $max = rand(0, 19);
+        for ($i = 0; $i < $max; $i++) {
+            $children = fakeRecord($depth);
+            foreach($children as $key => $val) {
+                $record[] = $val;
+            }
+        }
+    } else {
+        $record[] = [
+            'identifier' =>  str_replace('.', '', uniqid('', true)),
+            'name' => $words[rand(0, $wordsCount - 1)],
+            'icon' => $icons[rand(0, $iconCount - 1)],
+            'checked' => rand(0, 1) === 1,
+            'depth' => (4 - $depth),
+            'hasChildren' => false
+        ];
     }
     return $record;
 }

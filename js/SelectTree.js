@@ -34,13 +34,15 @@ define(['d3', 'SvgTree'], function (d3, SvgTree) {
      * @param {Object} settings
      */
     SelectTree.prototype.initialize = function (selector, settings) {
-        _super_.initialize.call(this, selector, settings);
-
+        if (!_super_.initialize.call(this, selector, settings)) {
+            return false;
+        }
         this.addIcons();
         this.dispatch.on('updateNodes.selectTree', this.updateNodes);
         this.dispatch.on('loadDataAfter.selectTree', this.loadDataAfter);
         this.dispatch.on('updateSvg.selectTree', this.renderCheckbox);
         this.dispatch.on('nodeSelectedAfter.selectTree', this.nodeSelectedAfter);
+        return true;
     };
 
     /**
@@ -54,7 +56,7 @@ define(['d3', 'SvgTree'], function (d3, SvgTree) {
             nodeSelection
                 .selectAll('.tree-check use')
                 .attr('visibility', function (node) {
-                    var checked = Boolean(node.data.checked);
+                    var checked = Boolean(node.checked);
                     if (d3.select(this).classed('icon-checked') && checked) {
                         return 'visible';
                     } else if (d3.select(this).classed('icon-indeterminate') && node.indeterminate && !checked) {
@@ -79,9 +81,9 @@ define(['d3', 'SvgTree'], function (d3, SvgTree) {
             this.textPosition = 50;
             //this can be simplified to single "use" element with changing href on click when we drop IE11 on WIN7 support
             var g = nodeSelection.filter(function (node) {
-                    //do not render checkbox if node is not selectable
-                    return me.isNodeSelectable(node) || Boolean(node.data.checked);
-                })
+                //do not render checkbox if node is not selectable
+                return me.isNodeSelectable(node) || Boolean(node.checked);
+            })
                 .append('g')
                 .attr('class', 'tree-check')
                 .on('click', function (d) {
@@ -109,23 +111,6 @@ define(['d3', 'SvgTree'], function (d3, SvgTree) {
     };
 
     /**
-     * Does not modify the data, just checking with early return
-     *
-     * @param {Node} node
-     */
-    SelectTree.prototype.hasCheckedOrIndeterminateChildren = function (node) {
-        if (!node.children) {
-            return false;
-        }
-
-        return node.children.some(function (child) {
-            if (child.data.checked || child.indeterminate) {
-                return true;
-            }
-        });
-    };
-
-    /**
      * Updates the indeterminate state for ancestors of the current node
      *
      * @param {Node} node
@@ -133,8 +118,12 @@ define(['d3', 'SvgTree'], function (d3, SvgTree) {
     SelectTree.prototype.updateAncestorsIndetermineState = function (node) {
         var me = this;
         //foreach ancestor except node itself
-        node.ancestors().slice(1).forEach(function (n) {
-            n.indeterminate = (node.data.checked || node.indeterminate) ? true : me.hasCheckedOrIndeterminateChildren(n);
+        var indeterminate = false;
+        node.parents.forEach(function (index) {
+            var n = me.nodes[index];
+            n.indeterminate = (node.checked || node.indeterminate || indeterminate);
+            // check state for the next level
+            indeterminate = (node.checked || node.indeterminate || n.checked || n.indeterminate)
         });
     };
 
@@ -144,36 +133,27 @@ define(['d3', 'SvgTree'], function (d3, SvgTree) {
      * It's done once after loading data. Later indeterminate state is updated just for the subset of nodes
      */
     SelectTree.prototype.loadDataAfter = function () {
-        this.rootNode.each(function (node) {
+        this.nodes.forEach(function (node) {
             node.indeterminate = false;
         });
-        this.calculateIndeterminate(this.rootNode);
+        this.calculateIndeterminate(this.nodes);
+        // Initialise "value" attribute of input field after load and revalidate form engine fields
+        this.saveCheckboxes(this.nodes);
     };
 
     /**
      * Sets indeterminate state for a subtree. It relays on the tree to have indeterminate state reset beforehand.
      *
-     * @param {Node} node
+     * @param {Array} nodes
      */
-    SelectTree.prototype.calculateIndeterminate = function (node) {
-        if (!node.children) {
-            node.indeterminate = false;
-            return;
-        }
-
-        node.eachAfter(function (n) {
-            if ((n.data.checked || n.indeterminate) && n.parent) {
-                n.parent.indeterminate = true;
+    SelectTree.prototype.calculateIndeterminate = function (nodes) {
+        nodes.forEach(function(node) {
+            if ((node.checked || node.indeterminate) && node.parents && node.parents.length > 0) {
+                node.parents.forEach(function(parentNodeIndex) {
+                    nodes[parentNodeIndex].indeterminate = true;
+                })
             }
         })
-    };
-
-
-    /**
-     * @param {Node} node
-     */
-    SelectTree.prototype.updateTextNode = function (node) {
-        return _super_.updateTextNode.call(this, node) + (this.settings.showCheckboxes && node.data.checked ? ' (checked)' : '') + ( node.indeterminate ? ' (indeterminate)' : '');
     };
 
     /**
@@ -183,6 +163,8 @@ define(['d3', 'SvgTree'], function (d3, SvgTree) {
      */
     SelectTree.prototype.nodeSelectedAfter = function (node) {
         this.updateAncestorsIndetermineState(node);
+        // check all nodes again, to ensure correct display of indeterminate state
+        this.calculateIndeterminate(this.nodes);
         this.saveCheckboxes(node);
     };
 
@@ -192,14 +174,11 @@ define(['d3', 'SvgTree'], function (d3, SvgTree) {
      * @param {Node} node
      */
     SelectTree.prototype.saveCheckboxes = function (node) {
-        if (typeof this.settings.inputName !== 'undefined') {
+        if (typeof this.settings.input !== 'undefined') {
             var selectedNodes = this.getSelectedNodes();
-
-            d3
-                .select(this.settings.inputName)
-                .property('value', selectedNodes.map(function (d) {
-                    return d.data.identifier
-                }));
+            this.settings.input.val(selectedNodes.map(function (d) {
+                return d.identifier
+            }));
         }
     };
 

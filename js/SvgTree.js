@@ -1,3 +1,16 @@
+/*
+ * This file is part of the TYPO3 CMS project.
+ *
+ * It is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License, either version 2
+ * of the License, or any later version.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE.txt file that was distributed with this source code.
+ *
+ * The TYPO3 project - inspiring people to share!
+ */
+
 define(['jquery', 'd3'], function ($, d3) {
     'use strict';
     /**
@@ -67,13 +80,6 @@ define(['jquery', 'd3'], function ($, d3) {
         this.linksContainer = null;
 
         /**
-         * Tree root node
-         *
-         * @type {Node}
-         */
-        this.rootNode = null;
-
-        /**
          *
          * @type {{nodes: Node[], links: Object, icons: Object}}
          */
@@ -119,7 +125,7 @@ define(['jquery', 'd3'], function ($, d3) {
             var $wrapper = $(selector);
             // Do nothing if already initialized
             if ($wrapper.data('svgtree-initialized')) {
-                return;
+                return false;
             }
 
             $.extend(this.settings, settings);
@@ -127,7 +133,7 @@ define(['jquery', 'd3'], function ($, d3) {
             this.wrapper = $wrapper;
             this.dispatch = d3.dispatch('updateNodes', 'updateSvg', 'loadDataAfter', 'prepareLoadedNode', 'nodeSelectedAfter');
             this.svg = d3
-                .select(selector)
+                .select($wrapper[0])
                 .append('svg')
                 .attr('version', '1.1')
                 .attr('width', '100%');
@@ -152,13 +158,13 @@ define(['jquery', 'd3'], function ($, d3) {
             this.wrapper.data('svgtree', this);
             this.wrapper.data('svgtree-initialized', true);
             this.wrapper.trigger('svgTree.initialized');
+            return true;
         },
 
         /**
          * Updates variables used for visible nodes calculation
          */
         updateScrollPosition: function () {
-
             this.viewportHeight = this.wrapper.height();
             this.scrollTop = this.wrapper.scrollTop();
             this.scrollBottom = this.scrollTop + this.viewportHeight + (this.viewportHeight / 2);
@@ -171,36 +177,31 @@ define(['jquery', 'd3'], function ($, d3) {
             var me = this;
             d3.json(this.settings.dataUrl, function (error, json) {
                 if (error) throw error;
-                if (Array.isArray(json)) {
-                    //little hack, so we can use json structure prepared by ExtJsJsonTreeRenderer
-                    json = json[0];
-                }
-
-                var rootNode = d3.hierarchy(json);
-                d3.tree(rootNode);
-
-                rootNode.each(function (n) {
-                    n.open = (me.settings.expandUpToLevel !== null) ? n.depth < me.settings.expandUpToLevel : Boolean(n.expanded);
-                    n.hasChildren = (n.children || n._children) ? 1 : 0;
-                    n.parents = [];
-                    n._isDragged = false;
-                    if (n.parent) {
-                        var x = n;
-                        while (x && x.parent) {
-                            if (x.parent.data.identifier) {
-                                n.parents.push(x.parent.data.identifier);
+                var nodes = Array.isArray(json) ? json : [];
+                nodes = nodes.map(function (node, index) {
+                    node.open = (me.settings.expandUpToLevel !== null) ? node.depth < me.settings.expandUpToLevel : Boolean(node.expanded);
+                    node.parents = [];
+                    node._isDragged = false;
+                    if (node.depth > 0) {
+                        var currentDepth = node.depth;
+                        for (var i = index; i >= 0; i--) {
+                            var currentNode = nodes[i];
+                            if (currentNode.depth < currentDepth) {
+                                node.parents.push(i);
+                                currentDepth = currentNode.depth;
                             }
-                            x = x.parent;
                         }
                     }
-                    if (typeof n.data.checked == 'undefined') {
-                        n.data.checked = false;
-                        me.settings.unselectableElements.push(n.data.identifier);
+                    if (typeof node.checked == 'undefined') {
+                        node.checked = false;
+                        me.settings.unselectableElements.push(node.identifier);
                     }
                     //dispatch event
-                    me.dispatch.call('prepareLoadedNode', me, n);
+                    me.dispatch.call('prepareLoadedNode', me, node);
+                    return node;
                 });
-                me.rootNode = rootNode;
+
+                me.nodes = nodes;
                 me.dispatch.call('loadDataAfter', me);
                 me.prepareDataForVisibleNodes();
                 me.update();
@@ -216,16 +217,15 @@ define(['jquery', 'd3'], function ($, d3) {
             var me = this;
 
             var blacklist = {};
-            this.rootNode.eachBefore(function (node) {
+            this.nodes.map(function (node, index) {
                 if (!node.open) {
-                    blacklist[node.data.identifier] = true;
+                    blacklist[index] = true;
                 }
-
             });
 
-            this.data.nodes = this.rootNode.descendantsBefore().filter(function (node) {
-                return node.hidden != true && !node.parents.some(function (id) {
-                        return Boolean(blacklist[id]);
+            this.data.nodes = this.nodes.filter(function (node) {
+                return node.hidden != true && !node.parents.some(function (index) {
+                        return Boolean(blacklist[index]);
                     });
             });
 
@@ -236,22 +236,33 @@ define(['jquery', 'd3'], function ($, d3) {
                 //delete n.children;
                 n.x = n.depth * me.settings.indentWidth;
                 n.y = i * me.settings.nodeHeight;
-                if (n.parent) {
+                if (n.parents[0] !== undefined) {
                     me.data.links.push({
-                        source: n.parent,
+                        source: me.nodes[n.parents[0]],
                         target: n
                     });
                 }
-                if (!n.iconHash && me.settings.showIcons && n.data.icon) {
-                    n.iconHash = Math.abs(me.hashCode(n.data.icon));
+                if (!n.iconHash && me.settings.showIcons && n.icon) {
+                    n.iconHash = Math.abs(me.hashCode(n.icon));
                     if (iconHashes.indexOf(n.iconHash) === -1) {
                         iconHashes.push(n.iconHash);
                         me.data.icons.push({
                             identifier: n.iconHash,
-                            icon: n.data.icon
+                            icon: n.icon
                         });
                     }
-                    delete n.data.icon;
+                    delete n.icon;
+                }
+                if (!n.iconOverlayHash && me.settings.showIcons && n.overlayIcon) {
+                    n.iconOverlayHash = Math.abs(me.hashCode(n.overlayIcon));
+                    if (iconHashes.indexOf(n.iconOverlayHash) === -1) {
+                        iconHashes.push(n.iconOverlayHash);
+                        me.data.icons.push({
+                            identifier: n.iconOverlayHash,
+                            icon: n.overlayIcon
+                        });
+                    }
+                    delete n.overlayIcon;
                 }
             });
             this.svg.attr('height', this.data.nodes.length * this.settings.nodeHeight);
@@ -267,7 +278,7 @@ define(['jquery', 'd3'], function ($, d3) {
 
             var visibleNodes = this.data.nodes.slice(position, position + visibleRows);
             var nodes = this.nodesContainer.selectAll('.node').data(visibleNodes, function (d) {
-                return d.data.identifier;
+                return d.identifier;
             });
 
             // delete nodes without corresponding data
@@ -275,23 +286,27 @@ define(['jquery', 'd3'], function ($, d3) {
                 .exit()
                 .remove();
 
-            nodes = this.updateSVGElements(nodes);
+            nodes = this.enterSvgElements(nodes);
 
             this.updateLinks();
             // update
             nodes
-                .attr('transform', this.xy)
+                .attr('transform', this.getNodeTransform)
                 .select('text')
-                .text(this.updateTextNode.bind(me));
+                .text(this.getNodeLabel.bind(me));
+
             nodes
-                .select('.toggle')
-                .attr('transform', this.updateChevronTransform)
-                .attr('visibility', this.updateChevronVisibility);
+                .select('.chevron')
+                .attr('transform', this.getChevronTransform)
+                .attr('visibility', this.getChevronVisibility);
 
             if (this.settings.showIcons) {
                 nodes
-                    .select('use')
-                    .attr('xlink:href', this.updateIconId);
+                    .select('use.node-icon')
+                    .attr('xlink:href', this.getIconId);
+                nodes
+                    .select('use.node-icon-overlay')
+                    .attr('xlink:href', this.getIconOverlayId);
             }
 
             //dispatch event
@@ -320,16 +335,16 @@ define(['jquery', 'd3'], function ($, d3) {
                 .attr('class', 'link')
                 //create + update
                 .merge(links)
-                .attr('d', this.squaredDiagonal.bind(me));
+                .attr('d', this.getLinkPath.bind(me));
         },
 
         /**
-         * Adds missing svg nodes
+         * Adds missing SVG nodes
          *
          * @param {Selection} nodes
          * @returns {Selection}
          */
-        updateSVGElements: function (nodes) {
+        enterSvgElements: function (nodes) {
             var me = this;
             me.textPosition = 10;
 
@@ -360,8 +375,8 @@ define(['jquery', 'd3'], function ($, d3) {
             var nodeEnter = nodes
                 .enter()
                 .append('g')
-                .attr('class', 'node')
-                .attr('transform', this.xy);
+                .attr('class', this.getNodeClass)
+                .attr('transform', this.getNodeTransform);
 
             // append the chevron element
             var chevron = nodeEnter
@@ -386,6 +401,13 @@ define(['jquery', 'd3'], function ($, d3) {
                     .append('use')
                     .attr('x', 8)
                     .attr('y', -8)
+                    .attr('class', 'node-icon')
+                    .on('click', this.clickOnIcon.bind(me));
+                nodeEnter
+                    .append('use')
+                    .attr('x', 8)
+                    .attr('y', -3)
+                    .attr('class', 'node-icon-overlay')
                     .on('click', this.clickOnIcon.bind(me));
             }
 
@@ -399,6 +421,10 @@ define(['jquery', 'd3'], function ($, d3) {
                 .on('click', this.clickOnLabel.bind(me))
                 .on('dblclick', this.dblClickOnLabel.bind(me));
 
+            nodeEnter
+                .append('title')
+                .text(this.getNodeTitle.bind(me));
+
             return nodes.merge(nodeEnter);
         },
 
@@ -408,8 +434,28 @@ define(['jquery', 'd3'], function ($, d3) {
          * @param {Node} node
          * @returns {String}
          */
-        updateTextNode: function (node) {
-            return node.data.name;
+        getNodeLabel: function (node) {
+            return node.name;
+        },
+
+        /**
+         * Computes the tree node class
+         *
+         * @param {Node} node
+         * @returns {String}
+         */
+        getNodeClass: function (node) {
+            return 'node identifier-' + node.identifier;
+        },
+
+        /**
+         * Computes the tree item label based on the data
+         *
+         * @param {Node} node
+         * @returns {String}
+         */
+        getNodeTitle: function (node) {
+            return 'uid=' + node.identifier;
         },
 
         /**
@@ -418,7 +464,7 @@ define(['jquery', 'd3'], function ($, d3) {
          * @param {Node} node
          * @returns {String}
          */
-        updateChevronTransform: function (node) {
+        getChevronTransform: function (node) {
             return node.open ? 'translate(8 -8) rotate(90)' : 'translate(-8 -8) rotate(0)';
         },
 
@@ -428,7 +474,7 @@ define(['jquery', 'd3'], function ($, d3) {
          * @param {Node} node
          * @returns {String}
          */
-        updateChevronVisibility: function (node) {
+        getChevronVisibility: function (node) {
             return node.hasChildren ? 'visible' : 'hidden';
         },
 
@@ -438,8 +484,17 @@ define(['jquery', 'd3'], function ($, d3) {
          * @param {Node} node
          * @returns {String}
          */
-        updateIconId: function (node) {
+        getIconId: function (node) {
             return '#icon-' + node.iconHash;
+        },
+        /**
+         * Returns icon's href attribute value
+         *
+         * @param {Node} node
+         * @returns {String}
+         */
+        getIconOverlayId: function (node) {
+            return '#icon-' + node.iconOverlayHash;
         },
 
         /**
@@ -448,7 +503,7 @@ define(['jquery', 'd3'], function ($, d3) {
          * @param {Object} link
          * @returns {String}
          */
-        squaredDiagonal: function (link) {
+        getLinkPath: function (link) {
             var me = this;
 
             var target = {
@@ -471,7 +526,7 @@ define(['jquery', 'd3'], function ($, d3) {
          *
          * @param {Node} node
          */
-        xy: function (node) {
+        getNodeTransform: function (node) {
             return 'translate(' + node.x + ',' + node.y + ')';
         },
 
@@ -498,7 +553,7 @@ define(['jquery', 'd3'], function ($, d3) {
             if (!this.isNodeSelectable(node)) {
                 return;
             }
-            var checked = node.data.checked;
+            var checked = node.checked;
             this.handleExclusiveNodeSelection(node);
 
             if (this.settings.validation && this.settings.validation.maxItems) {
@@ -507,8 +562,7 @@ define(['jquery', 'd3'], function ($, d3) {
                     return;
                 }
             }
-
-            node.data.checked = !checked;
+            node.checked = !checked;
 
             this.dispatch.call('nodeSelectedAfter', this, node);
             this.update();
@@ -523,19 +577,19 @@ define(['jquery', 'd3'], function ($, d3) {
         handleExclusiveNodeSelection: function (node) {
             var exclusiveKeys = this.settings.exclusiveNodesIdentifiers.split(','),
                 me = this;
-            if (this.settings.exclusiveNodesIdentifiers.length && node.data.checked === false) {
-                if (exclusiveKeys.indexOf('' + node.data.identifier) > -1) {
+            if (this.settings.exclusiveNodesIdentifiers.length && node.checked === false) {
+                if (exclusiveKeys.indexOf('' + node.identifier) > -1) {
                     // this key is exclusive, so uncheck all others
-                    this.rootNode.each(function (node) {
-                        if (node.data.checked === true) {
-                            node.data.checked = false;
+                    this.nodes.forEach(function (node) {
+                        if (node.checked === true) {
+                            node.checked = false;
                             me.dispatch.call('nodeSelectedAfter', me, node);
                         }
                     });
                     this.exclusiveSelectedNode = node;
-                } else if (exclusiveKeys.indexOf('' + node.data.identifier) === -1 && this.exclusiveSelectedNode) {
+                } else if (exclusiveKeys.indexOf('' + node.identifier) === -1 && this.exclusiveSelectedNode) {
                     //current node is not exclusive, but other exclusive node is already selected
-                    this.exclusiveSelectedNode.data.checked = false;
+                    this.exclusiveSelectedNode.checked = false;
                     this.dispatch.call('nodeSelectedAfter', this, this.exclusiveSelectedNode);
                     this.exclusiveSelectedNode = null;
                 }
@@ -550,7 +604,7 @@ define(['jquery', 'd3'], function ($, d3) {
          * @returns {Boolean}
          */
         isNodeSelectable: function (node) {
-            return !this.settings.readOnlyMode && this.settings.unselectableElements.indexOf(node.data.identifier) == -1;
+            return !this.settings.readOnlyMode && this.settings.unselectableElements.indexOf(node.identifier) == -1;
         },
 
         /**
@@ -559,14 +613,9 @@ define(['jquery', 'd3'], function ($, d3) {
          * @returns {Node[]}
          */
         getSelectedNodes: function () {
-            var selectedNodes = [];
-
-            this.rootNode.each(function (node) {
-                if (node.data.checked) {
-                    selectedNodes.push(node)
-                }
+            return this.nodes.filter(function (node) {
+                return node.checked;
             });
-            return selectedNodes;
         },
 
         /**
@@ -575,7 +624,6 @@ define(['jquery', 'd3'], function ($, d3) {
          * @param {Node} node
          */
         clickOnIcon: function (node) {
-            console.log('Clicked on icon of node' + node.data.identifier + ' ' + node.data.name);
         },
 
         /**
@@ -593,7 +641,6 @@ define(['jquery', 'd3'], function ($, d3) {
          * @param {Node} node
          */
         dblClickOnLabel: function (node) {
-            console.log('Double clicked on label of node' + node.data.identifier + ' ' + node.data.name);
         },
 
         /**
@@ -633,7 +680,7 @@ define(['jquery', 'd3'], function ($, d3) {
          * Expand all nodes and refresh view
          */
         expandAll: function () {
-            this.rootNode.each(this.showChildren.bind(this));
+            this.nodes.forEach(this.showChildren.bind(this));
             this.prepareDataForVisibleNodes();
             this.update();
         },
@@ -642,11 +689,10 @@ define(['jquery', 'd3'], function ($, d3) {
          * Collapse all nodes recursively and refresh view
          */
         collapseAll: function () {
-            this.rootNode.each(this.hideChildren.bind(this));
+            this.nodes.forEach(this.hideChildren.bind(this));
             this.prepareDataForVisibleNodes();
             this.update();
         }
-
     };
 
     return SvgTree;

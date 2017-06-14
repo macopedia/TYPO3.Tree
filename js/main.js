@@ -1,4 +1,5 @@
-require(['SvgTree', 'SelectTree', 'PageTree', 'TreeToolbar'], function (SvgTree, SelectTree, PageTree, TreeToolbar) {
+require(['SvgTree', 'SelectTree', 'TreeToolbar'], function (SvgTree, SelectTree, TreeToolbar) {
+
     var treeConfiguration = new SvgTree;
     treeConfiguration.initialize('.tree-configuration', {
         'dataUrl': 'tree-configuration.json',
@@ -18,10 +19,13 @@ require(['SvgTree', 'SelectTree', 'PageTree', 'TreeToolbar'], function (SvgTree,
     var treeCategoryToolbar = new TreeToolbar;
     treeCategoryToolbar.initialize('.tree-category');
 
-    var treePage = new PageTree;
+    var treePage = new SelectTree;
     treePage.initialize('.tree-page', {
         'dataUrl': 'tree-page.json',
+        'showCheckboxes': false,
+        'inputName': '.selected-nodes',
         'showIcons': true,
+        'unselectableElements': ['573b150a78e4f228880592'],
         'expandUpToLevel': 3
     });
 
